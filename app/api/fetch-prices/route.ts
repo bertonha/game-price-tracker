@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { chromium, type Browser } from "playwright";
-import type { StorePrice } from "@/lib/types";
+import type { Edition, StorePrice } from "@/lib/types";
 
 // Reuse a single browser process across requests (avoids ~2s cold-start per call).
-// The browser is created lazily on first use.
 let _browser: Browser | null = null;
 async function getBrowser(): Promise<Browser> {
   if (!_browser || !_browser.isConnected()) {
@@ -13,7 +12,7 @@ async function getBrowser(): Promise<Browser> {
 }
 
 // ── Steam ────────────────────────────────────────────────────────────────────
-// Official Steam store API, no key required.
+
 async function fetchSteam(appid: string): Promise<StorePrice> {
   if (!appid) return { price: "N/A", discount: null, url: null };
   const storeUrl = `https://store.steampowered.com/app/${appid}/?cc=BR`;
@@ -24,14 +23,7 @@ async function fetchSteam(appid: string): Promise<StorePrice> {
     );
     const json = (await res.json()) as Record<
       string,
-      {
-        data?: {
-          price_overview?: {
-            final_formatted: string;
-            discount_percent: number;
-          };
-        };
-      }
+      { data?: { price_overview?: { final_formatted: string; discount_percent: number } } }
     >;
     const overview = json[appid]?.data?.price_overview;
     if (!overview) return { price: "N/A", discount: null, url: storeUrl };
@@ -45,12 +37,52 @@ async function fetchSteam(appid: string): Promise<StorePrice> {
   }
 }
 
+const EXCLUDE_KEYWORDS = /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
+
+async function fetchSteamEditions(baseAppid: string): Promise<Edition[]> {
+  try {
+    const res = await fetch(
+      `https://store.steampowered.com/api/appdetails?appids=${baseAppid}&cc=BR`,
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return [];
+
+    const json = (await res.json()) as Record<string, {
+      data?: {
+        package_groups?: {
+          subs?: {
+            packageid: number;
+            option_text: string;
+            percent_savings: number;
+            price_in_cents_with_discount: number;
+          }[];
+        }[];
+      };
+    }>;
+
+    const subs = json[baseAppid]?.data?.package_groups?.[0]?.subs ?? [];
+    // Skip the first sub (base game already shown); skip upgrades/DLCs
+    return subs
+      .slice(1)
+      .filter((s) => !EXCLUDE_KEYWORDS.test(s.option_text))
+      .map((s) => {
+        // option_text: "Game Name Edition - R$ 349,99" — strip the price suffix
+        const name = s.option_text.replace(/\s*-\s*R\$[\s\d,.]+$/, "").replace(/<[^>]+>/g, "").trim();
+        const price = "R$ " + (s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ",");
+        const discount = s.percent_savings > 0 ? `-${s.percent_savings}%` : null;
+        const url = `https://store.steampowered.com/sub/${s.packageid}/?cc=BR`;
+        return { name, price, discount, url };
+      });
+  } catch {
+    return [];
+  }
+}
+
 // ── Nuuvem ───────────────────────────────────────────────────────────────────
 // Nuuvem is a JS-rendered SPA — we use a headless browser to get the real DOM.
-// Selectors confirmed by inspecting live search results on nuuvem.com.
 //
 // data-price JSON shape on .mod-price elements:
-//   { iv: <int original price>, e: <discounted cents | null>, v: <current cents> }
+//   { iv: <int original price in reais>, e: <discounted cents | null>, v: <current cents> }
 async function fetchNuuvem(name: string): Promise<StorePrice> {
   const q = encodeURIComponent(name);
   const searchUrl = `https://www.nuuvem.com/br-pt/catalog/drm/steam/search/${q}`;
@@ -61,70 +93,77 @@ async function fetchNuuvem(name: string): Promise<StorePrice> {
     await page.goto(searchUrl, { waitUntil: "networkidle", timeout: 20000 });
     await page.waitForSelector(".game-card", { timeout: 10000 });
 
-    // Pick the card whose title best matches the game name, then extract price.
-    const cardIndex = await page.evaluate((gameName: string) => {
+    // Score all cards; return index + extracted price data for each.
+    const scoredCards = await page.evaluate((gameName: string) => {
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
       const queryWords = normalize(gameName).split(/\s+/).filter(Boolean);
-      const cards = Array.from(document.querySelectorAll(".game-card"));
 
-      let bestIndex = 0;
-      let bestScore = -Infinity;
-      cards.forEach((card, i) => {
-        // Prefer available products
+      return Array.from(document.querySelectorAll(".game-card")).map((card, i) => {
         const available = card.classList.contains("product__available") ? 0.5 : 0;
-        // Use the title element only, not full card text
         const titleEl = card.querySelector(".game-card__product-name");
-        const title = normalize(titleEl?.textContent ?? "");
+        const titleText = titleEl?.textContent?.trim() ?? "";
+        const title = normalize(titleText);
         const titleWords = title.split(/\s+/).filter(Boolean);
-        const matchCount = queryWords.filter(w => titleWords.includes(w)).length;
+        const matchCount = queryWords.filter((w) => titleWords.includes(w)).length;
         const matchRatio = matchCount / Math.max(queryWords.length, 1);
         const extraWords = Math.max(0, titleWords.length - queryWords.length);
         const score = matchRatio - extraWords * 0.15 + available;
-        if (score > bestScore) { bestScore = score; bestIndex = i; }
+
+        const raw = card.querySelector(".mod-price")?.getAttribute("data-price");
+        const priceJson = raw
+          ? (JSON.parse(raw) as { iv: number; e: number | null; v: number })
+          : null;
+
+        let price = "N/A";
+        let discount: string | null = null;
+        if (priceJson) {
+          const currentCents = priceJson.v ?? priceJson.iv * 100;
+          price = "R$ " + (currentCents / 100).toFixed(2).replace(".", ",");
+          if (priceJson.e != null && priceJson.iv > 0) {
+            const originalCents = priceJson.iv * 100;
+            const pct = Math.round(((originalCents - priceJson.e) / originalCents) * 100);
+            if (pct > 0) discount = `-${pct}%`;
+          }
+        } else {
+          const text = card.querySelector(".product-price--val")?.textContent ?? "";
+          const matches = text.match(/R\$\s*[\d.,]+/g);
+          price = matches?.at(-1)?.replace(/\s+/g, " ").trim() ?? "N/A";
+        }
+
+        return { i, score, title: titleText, price, discount };
       });
-      return bestIndex;
     }, name);
 
-    const cardData = await page.evaluate((idx: number) => {
-      const card = document.querySelectorAll(".game-card")[idx];
-      if (!card) return null;
+    // Keep cards with a positive match score, sort best first, cap at 4.
+    const topCards = scoredCards
+      .filter((c) => c.score >= 0.3)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4);
 
-      // data-price: { iv: original price (reais), e: discounted cents | null, v: current cents }
-      const raw = card.querySelector(".mod-price")?.getAttribute("data-price");
-      const priceJson = raw ? (JSON.parse(raw) as { iv: number; e: number | null; v: number }) : null;
+    if (topCards.length === 0) return { price: "N/A", discount: null, url: searchUrl };
 
-      let price = "N/A";
-      let discount: string | null = null;
-
-      if (priceJson) {
-        // Use current price (v in cents), fall back to iv * 100
-        const currentCents = priceJson.v ?? (priceJson.iv * 100);
-        price = "R$ " + (currentCents / 100).toFixed(2).replace(".", ",");
-
-        if (priceJson.e != null && priceJson.iv > 0) {
-          const originalCents = priceJson.iv * 100;
-          const pct = Math.round(((originalCents - priceJson.e) / originalCents) * 100);
-          if (pct > 0) discount = `-${pct}%`;
-        }
-      } else {
-        // Fallback: grab only the last R$ amount from the price element text
-        const text = card.querySelector(".product-price--val")?.textContent ?? "";
-        const matches = text.match(/R\$\s*[\d.,]+/g);
-        price = matches?.at(-1)?.replace(/\s+/g, " ").trim() ?? "N/A";
+    // Resolve each card's product URL by clicking and going back.
+    const resolved: { title: string; price: string; discount: string | null; url: string }[] = [];
+    for (const card of topCards) {
+      try {
+        await page.locator(".game-card").nth(card.i).click();
+        await page.waitForURL(/\/item\//, { timeout: 10000 });
+        resolved.push({ title: card.title, price: card.price, discount: card.discount, url: page.url() });
+        await page.goBack({ waitUntil: "networkidle", timeout: 15000 });
+      } catch {
+        resolved.push({ title: card.title, price: card.price, discount: card.discount, url: searchUrl });
       }
+    }
 
-      return { price, discount };
-    }, cardIndex);
-
-    if (!cardData) return { price: "N/A", discount: null, url: searchUrl };
-
-    // Cards have no <a> tags — navigate by clicking to discover the product URL.
-    const cards = page.locator(".game-card");
-    await cards.nth(cardIndex).click();
-    await page.waitForURL(/\/item\//, { timeout: 10000 });
-    const productUrl = page.url();
-
-    return { price: cardData.price, discount: cardData.discount, url: productUrl };
+    const [base, ...rest] = resolved;
+    return {
+      price: base!.price,
+      discount: base!.discount,
+      url: base!.url,
+      editions: rest.length > 0
+        ? rest.map((r) => ({ name: r.title, price: r.price, discount: r.discount, url: r.url }))
+        : undefined,
+    };
   } catch {
     return { price: "N/A", discount: null, url: searchUrl };
   } finally {
@@ -135,14 +174,23 @@ async function fetchNuuvem(name: string): Promise<StorePrice> {
 // ── Route ────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const { name, appid } = (await req.json()) as { name?: string; appid?: string };
+  if (!appid) {
+    return NextResponse.json({ error: "Missing game appid" }, { status: 400 });
+  }
   if (!name) {
     return NextResponse.json({ error: "Missing game name" }, { status: 400 });
   }
 
-  const [steam, nuuvem] = await Promise.all([
-    fetchSteam(appid ?? ""),
+  const [steamBase, nuuvem] = await Promise.all([
+    fetchSteam(appid),
     fetchNuuvem(name),
   ]);
+
+  const steamEditions = appid ? await fetchSteamEditions(appid) : [];
+  const steam: StorePrice = {
+    ...steamBase,
+    editions: steamEditions.length > 0 ? steamEditions : undefined,
+  };
 
   return NextResponse.json({ prices: { steam, nuuvem } });
 }
