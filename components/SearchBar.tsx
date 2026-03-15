@@ -71,13 +71,23 @@ export default function SearchBar({ onAdd, disabled }: Props) {
         else alert("Game not found for that AppID.");
       } catch { alert("Failed to look up game."); }
     } else {
-      // Use first suggestion or bare name
+      // Use first suggestion, or fetch one if not yet loaded
       const first = suggestions[0];
       if (suggestions.length > 0 && first) {
         pickSuggestion(first);
       } else {
-        onAdd({ name: val, appid: "", img: "" });
-        setQuery("");
+        try {
+          const res = await fetch(`/api/search-games?q=${encodeURIComponent(val)}`);
+          const data = await res.json();
+          const top: SteamSuggestion | undefined = data.results?.[0];
+          if (top) {
+            pickSuggestion(top);
+          } else {
+            alert("No Steam game found for that name.");
+          }
+        } catch {
+          alert("Failed to search for that game.");
+        }
       }
     }
     setLoading(false);

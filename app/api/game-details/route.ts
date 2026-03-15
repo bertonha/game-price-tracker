@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       appid,
       name: appData.name as string,
-      img: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`,
+      img: appData.header_image as string,
     });
   } catch {
     return NextResponse.json({ error: "Failed to fetch game details" }, { status: 500 });

@@ -40,7 +40,6 @@ export default function HomePage() {
   }
 
   async function addGame(input: SteamSuggestion | { name: string; appid: string; img: string }) {
-    const key = input.appid || input.name;
     const existing = games.find((g) => (g.appid && g.appid === input.appid) || g.name === input.name);
     if (existing) {
       setStatus(`"${input.name}" is already in your list.`);
@@ -48,8 +47,24 @@ export default function HomePage() {
       return;
     }
 
+    if (!input.appid) {
+      setStatus("Could not find a Steam game for that search.");
+      setTimeout(() => setStatus(""), 3000);
+      return;
+    }
+
+    let resolved = { ...input };
+    if (input.appid) {
+      try {
+        const res = await fetch(`/api/game-details?appid=${input.appid}`);
+        const data = await res.json();
+        if (data.name) resolved = { ...resolved, name: data.name, img: data.img };
+      } catch { /* fall back to suggestion data */ }
+    }
+
+    const key = resolved.appid || resolved.name;
     const newGame: Game = {
-      ...input,
+      ...resolved,
       prices: {},
       addedAt: Date.now(),
     };

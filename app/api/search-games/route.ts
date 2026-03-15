@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     // Parse the HTML suggestions returned by Steam
     const results: { appid: string; name: string; img: string }[] = [];
     const matchRegex =
-      /<a[^>]+href="[^"]*\/app\/(\d+)[^"]*"[^>]*class="match"[^>]*>[\s\S]*?<div[^>]+class="match_name"[^>]*>([^<]+)<\/div>[\s\S]*?<img[^>]+src="([^"]+)"/g;
+      /data-ds-appid="(\d+)"[^>]*>[\s\S]*?<div[^>]+class="match_name"[^>]*>([^<]+)<\/div>[\s\S]*?<img[^>]+src="([^"]+)"/g;
 
     let m: RegExpExecArray | null;
     while ((m = matchRegex.exec(html)) !== null && results.length < 8) {
