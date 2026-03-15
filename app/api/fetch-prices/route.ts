@@ -84,7 +84,9 @@ async function fetchSteamEditions(baseAppid: string): Promise<Edition[]> {
 // data-price JSON shape on .mod-price elements:
 //   { iv: <int original price in reais>, e: <discounted cents | null>, v: <current cents> }
 async function fetchNuuvem(name: string): Promise<StorePrice> {
-  const q = encodeURIComponent(name);
+  // Strip special chars (colons, dashes, etc.) — they break Nuuvem's path-based search
+  const cleanName = name.replace(/[:\-–]/g, " ").replace(/\s+/g, " ").trim();
+  const q = encodeURIComponent(cleanName);
   const searchUrl = `https://www.nuuvem.com/br-pt/catalog/drm/steam/search/${q}`;
 
   const browser = await getBrowser();
@@ -95,8 +97,9 @@ async function fetchNuuvem(name: string): Promise<StorePrice> {
 
     // Score all cards; return index + extracted price data for each.
     const scoredCards = await page.evaluate((gameName: string) => {
+      const STOP_WORDS = new Set(["a", "an", "the", "of", "in", "on", "at", "to", "and", "or", "for", "de", "do", "da"]);
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
-      const queryWords = normalize(gameName).split(/\s+/).filter(Boolean);
+      const queryWords = normalize(gameName).split(/\s+/).filter(w => w.length > 1 && !STOP_WORDS.has(w));
 
       return Array.from(document.querySelectorAll(".game-card")).map((card, i) => {
         const available = card.classList.contains("product__available") ? 0.5 : 0;
@@ -107,7 +110,8 @@ async function fetchNuuvem(name: string): Promise<StorePrice> {
         const matchCount = queryWords.filter((w) => titleWords.includes(w)).length;
         const matchRatio = matchCount / Math.max(queryWords.length, 1);
         const extraWords = Math.max(0, titleWords.length - queryWords.length);
-        const score = matchRatio - extraWords * 0.15 + available;
+        // Available bonus only applies when base match is already decent (>= 0.5)
+        const score = matchRatio - extraWords * 0.15 + (matchRatio >= 0.5 ? available : 0);
 
         const raw = card.querySelector(".mod-price")?.getAttribute("data-price");
         const priceJson = raw
