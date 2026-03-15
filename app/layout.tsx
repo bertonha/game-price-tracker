@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Game Price Tracker",
-  description: "Compare game prices across Steam BR, Nuuvem, Humble Bundle, GreenManGaming and GamersGate",
+  description: "Compare game prices across Steam BR and Nuuvem",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
