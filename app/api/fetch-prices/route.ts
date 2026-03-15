@@ -74,11 +74,19 @@ async function fetchSteamEditions(baseAppid: string): Promise<Edition[]> {
     // For paid games the first paid sub IS the base game — skip it; for F2P all paid subs are editions
     const editionSubs = isFree ? allPaidSubs : allPaidSubs.slice(1);
 
+    const decodeHtml = (s: string) =>
+      s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+       .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+       .replace(/&reg;/gi, "®").replace(/&trade;/gi, "™")
+       .replace(/&ndash;/g, "–").replace(/&mdash;/g, "—");
+
     return editionSubs
       .filter((s) => !EXCLUDE_KEYWORDS.test(s.option_text))
       .map((s) => {
-        // option_text: "Game Name Edition - R$ 349,99" — strip the price suffix
-        const name = s.option_text.replace(/\s*-\s*R\$[\s\d,.]+$/, "").replace(/<[^>]+>/g, "").trim();
+        // option_text: "Game Name Edition - R$ 349,99" — strip price suffix then decode entities
+        const name = decodeHtml(
+          s.option_text.replace(/\s*-\s*R\$[\s\d,.]+$/, "").replace(/<[^>]+>/g, "").trim()
+        );
         const price = "R$ " + (s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ",");
         const discount = s.percent_savings > 0 ? `-${s.percent_savings}%` : null;
         const url = `https://store.steampowered.com/sub/${s.packageid}/?cc=BR`;
@@ -149,9 +157,11 @@ async function fetchNuuvem(name: string): Promise<StorePrice> {
       });
     }, name);
 
+    const NUUVEM_EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
+
     // Keep cards with a positive match score, sort best first, cap at 4.
     const topCards = scoredCards
-      .filter((c) => c.score >= 0.3)
+      .filter((c) => c.score >= 0.3 && !NUUVEM_EXCLUDE.test(c.title))
       .sort((a, b) => b.score - a.score)
       .slice(0, 4);
 
@@ -171,12 +181,14 @@ async function fetchNuuvem(name: string): Promise<StorePrice> {
     }
 
     const [base, ...rest] = resolved;
+    // Drop editions with same price as base (duplicate listings)
+    const editions = rest.filter((r) => r.price !== base!.price);
     return {
       price: base!.price,
       discount: base!.discount,
       url: base!.url,
-      editions: rest.length > 0
-        ? rest.map((r) => ({ name: r.title, price: r.price, discount: r.discount, url: r.url }))
+      editions: editions.length > 0
+        ? editions.map((r) => ({ name: r.title, price: r.price, discount: r.discount, url: r.url }))
         : undefined,
     };
   } catch {
