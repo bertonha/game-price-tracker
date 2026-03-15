@@ -6,8 +6,40 @@ import { loadGames, saveGames } from "@/lib/storage";
 import SearchBar from "@/components/SearchBar";
 import StoreFilter from "@/components/StoreFilter";
 import GameCard from "@/components/GameCard";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
+  const key = props.game.appid || props.game.name;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: key });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={isDragging ? "opacity-50 z-10" : ""}
+    >
+      <GameCard {...props} dragHandleProps={{ ...attributes, ...listeners }} />
+    </div>
+  );
+}
 
 export default function HomePage() {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [games, setGames] = useState<Game[]>([]);
   const [activeStores, setActiveStores] = useState<Set<string>>(
     new Set(STORES.map((s) => s.id))
@@ -146,6 +178,14 @@ export default function HomePage() {
     setTimeout(() => { setProgress(null); setStatus(""); }, 2500);
   }
 
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = games.findIndex((g) => (g.appid || g.name) === active.id);
+    const newIndex = games.findIndex((g) => (g.appid || g.name) === over.id);
+    persistGames(arrayMove(games, oldIndex, newIndex));
+  }
+
   function removeGame(key: string) {
     const updated = games.filter((g) => (g.appid || g.name) !== key);
     persistGames(updated);
@@ -235,21 +275,25 @@ export default function HomePage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {games.map((game) => {
-            const key = game.appid || game.name;
-            return (
-              <GameCard
-                key={key}
-                game={game}
-                activeStores={activeStores}
-                onRemove={removeGame}
-                onRefresh={refreshOne}
-                refreshing={refreshingKeys.has(key)}
-              />
-            );
-          })}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={games.map((g) => g.appid || g.name)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {games.map((game) => {
+                const key = game.appid || game.name;
+                return (
+                  <SortableGameCard
+                    key={key}
+                    game={game}
+                    activeStores={activeStores}
+                    onRemove={removeGame}
+                    onRefresh={refreshOne}
+                    refreshing={refreshingKeys.has(key)}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </main>
   );

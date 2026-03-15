@@ -10,6 +10,7 @@ interface Props {
   onRemove: (key: string) => void;
   onRefresh: (key: string) => void;
   refreshing?: boolean;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 function PriceCell({
@@ -48,6 +49,7 @@ export default function GameCard({
   onRemove,
   onRefresh,
   refreshing,
+  dragHandleProps,
 }: Props) {
   const key = game.appid || game.name;
   const best = bestDeal(game.prices as Record<string, { price?: string | null }>);
@@ -56,8 +58,11 @@ export default function GameCard({
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col">
-      {/* Header image */}
-      <div className="relative h-20 bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+      {/* Header image — also the drag handle */}
+      <div
+        {...dragHandleProps}
+        className={`relative h-20 bg-gray-100 dark:bg-gray-800 flex-shrink-0 ${dragHandleProps ? "cursor-grab active:cursor-grabbing" : ""}`}
+      >
         {game.img ? (
           <Image
             src={game.img}
