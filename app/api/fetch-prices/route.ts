@@ -18,14 +18,16 @@ async function fetchSteam(appid: string): Promise<StorePrice> {
   const storeUrl = `https://store.steampowered.com/app/${appid}/?cc=BR`;
   try {
     const res = await fetch(
-      `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=BR&filters=price_overview`,
+      `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=BR&filters=price_overview,basic`,
       { next: { revalidate: 3600 } }
     );
     const json = (await res.json()) as Record<
       string,
-      { data?: { price_overview?: { final_formatted: string; discount_percent: number } } }
+      { data?: { is_free?: boolean; price_overview?: { final_formatted: string; discount_percent: number } } }
     >;
-    const overview = json[appid]?.data?.price_overview;
+    const data = json[appid]?.data;
+    if (data?.is_free) return { price: "Free to Play", discount: null, url: storeUrl };
+    const overview = data?.price_overview;
     if (!overview) return { price: "N/A", discount: null, url: storeUrl };
     return {
       price: overview.final_formatted,
@@ -49,6 +51,7 @@ async function fetchSteamEditions(baseAppid: string): Promise<Edition[]> {
 
     const json = (await res.json()) as Record<string, {
       data?: {
+        is_free?: boolean;
         package_groups?: {
           subs?: {
             packageid: number;
@@ -60,10 +63,18 @@ async function fetchSteamEditions(baseAppid: string): Promise<Edition[]> {
       };
     }>;
 
-    const subs = json[baseAppid]?.data?.package_groups?.[0]?.subs ?? [];
-    // Skip the first sub (base game already shown); skip upgrades/DLCs
-    return subs
-      .slice(1)
+    const appData = json[baseAppid]?.data;
+    const isFree = appData?.is_free ?? false;
+
+    // Collect all paid subs across every package group
+    const allPaidSubs = (appData?.package_groups ?? [])
+      .flatMap((g) => g.subs ?? [])
+      .filter((s) => s.price_in_cents_with_discount > 0);
+
+    // For paid games the first paid sub IS the base game — skip it; for F2P all paid subs are editions
+    const editionSubs = isFree ? allPaidSubs : allPaidSubs.slice(1);
+
+    return editionSubs
       .filter((s) => !EXCLUDE_KEYWORDS.test(s.option_text))
       .map((s) => {
         // option_text: "Game Name Edition - R$ 349,99" — strip the price suffix
