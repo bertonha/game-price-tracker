@@ -1,40 +1,42 @@
-# fly.toml — https://fly.io/docs/reference/configuration/
-# Deploy with: fly launch (first time) or fly deploy
+# fly.toml app configuration file generated for game-price-tracker on 2026-03-15T17:31:42+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "game-price-tracker"
-primary_region = "gru"  # São Paulo — closest to BR pricing target
+app = 'game-price-tracker'
+primary_region = 'gru'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
-  NODE_ENV    = "production"
-  PORT        = "3000"
-  STEAM_COUNTRY  = "BR"
-  STEAM_LANGUAGE = "portuguese"
+  NODE_ENV = 'production'
+  PORT = '3000'
+  STEAM_COUNTRY = 'BR'
+  STEAM_LANGUAGE = 'portuguese'
 
 [http_service]
-  internal_port       = 3000
-  force_https         = true
-  auto_stop_machines  = "stop"
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
 
   [http_service.concurrency]
-    type       = "requests"
+    type = 'requests'
     hard_limit = 25
     soft_limit = 20
 
-[[vm]]
-  size   = "shared-cpu-1x"
-  memory = "1gb"   # Playwright/Chromium needs at least 512 MB; 1 GB is comfortable
-
 [checks]
   [checks.health]
-    grace_period = "10s"
-    interval     = "30s"
-    method       = "GET"
-    path         = "/"
-    port         = 3000
-    timeout      = "5s"
-    type         = "http"
+    port = 3000
+    type = 'http'
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '1gb'
