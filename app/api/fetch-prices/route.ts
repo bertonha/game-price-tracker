@@ -13,45 +13,27 @@ async function getBrowser(): Promise<Browser> {
 
 // ── Steam ────────────────────────────────────────────────────────────────────
 
+const EXCLUDE_KEYWORDS = /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
+
+const decodeHtml = (s: string) =>
+  s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+   .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+   .replace(/&reg;/gi, "®").replace(/&trade;/gi, "™")
+   .replace(/&ndash;/g, "–").replace(/&mdash;/g, "—");
+
 async function fetchSteam(appid: string): Promise<StorePrice> {
-  if (!appid) return { price: "N/A", discount: null, url: null };
   const storeUrl = `https://store.steampowered.com/app/${appid}/?cc=BR`;
   try {
     const res = await fetch(
-      `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=BR&filters=price_overview,basic`,
+      `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=BR`,
       { next: { revalidate: 3600 } }
     );
-    const json = (await res.json()) as Record<
-      string,
-      { data?: { is_free?: boolean; price_overview?: { final_formatted: string; discount_percent: number } } }
-    >;
-    const data = json[appid]?.data;
-    if (data?.is_free) return { price: "Free to Play", discount: null, url: storeUrl };
-    const overview = data?.price_overview;
-    if (!overview) return { price: "N/A", discount: null, url: storeUrl };
-    return {
-      price: overview.final_formatted,
-      discount: overview.discount_percent > 0 ? `-${overview.discount_percent}%` : null,
-      url: storeUrl,
-    };
-  } catch {
-    return { price: "N/A", discount: null, url: storeUrl };
-  }
-}
-
-const EXCLUDE_KEYWORDS = /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
-
-async function fetchSteamEditions(baseAppid: string): Promise<Edition[]> {
-  try {
-    const res = await fetch(
-      `https://store.steampowered.com/api/appdetails?appids=${baseAppid}&cc=BR`,
-      { next: { revalidate: 3600 } }
-    );
-    if (!res.ok) return [];
+    if (!res.ok) return { price: "N/A", discount: null, url: storeUrl };
 
     const json = (await res.json()) as Record<string, {
       data?: {
         is_free?: boolean;
+        price_overview?: { final_formatted: string; discount_percent: number };
         package_groups?: {
           subs?: {
             packageid: number;
@@ -63,37 +45,40 @@ async function fetchSteamEditions(baseAppid: string): Promise<Edition[]> {
       };
     }>;
 
-    const appData = json[baseAppid]?.data;
-    const isFree = appData?.is_free ?? false;
+    const data = json[appid]?.data;
+    if (!data) return { price: "N/A", discount: null, url: storeUrl };
 
-    // Collect all paid subs across every package group
-    const allPaidSubs = (appData?.package_groups ?? [])
+    if (data.is_free) return { price: "Free to Play", discount: null, url: storeUrl };
+
+    const overview = data.price_overview;
+    const base: StorePrice = overview
+      ? {
+          price: overview.final_formatted,
+          discount: overview.discount_percent > 0 ? `-${overview.discount_percent}%` : null,
+          url: storeUrl,
+        }
+      : { price: "N/A", discount: null, url: storeUrl };
+
+    // Editions from package_groups
+    const allPaidSubs = (data.package_groups ?? [])
       .flatMap((g) => g.subs ?? [])
       .filter((s) => s.price_in_cents_with_discount > 0);
 
-    // For paid games the first paid sub IS the base game — skip it; for F2P all paid subs are editions
-    const editionSubs = isFree ? allPaidSubs : allPaidSubs.slice(1);
-
-    const decodeHtml = (s: string) =>
-      s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-       .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-       .replace(/&reg;/gi, "®").replace(/&trade;/gi, "™")
-       .replace(/&ndash;/g, "–").replace(/&mdash;/g, "—");
-
-    return editionSubs
+    const editionSubs = allPaidSubs.slice(1); // first sub is always the base game
+    const editions: Edition[] = editionSubs
       .filter((s) => !EXCLUDE_KEYWORDS.test(s.option_text))
-      .map((s) => {
-        // option_text: "Game Name Edition - R$ 349,99" — strip price suffix then decode entities
-        const name = decodeHtml(
+      .map((s) => ({
+        name: decodeHtml(
           s.option_text.replace(/\s*-\s*R\$[\s\d,.]+$/, "").replace(/<[^>]+>/g, "").trim()
-        );
-        const price = "R$ " + (s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ",");
-        const discount = s.percent_savings > 0 ? `-${s.percent_savings}%` : null;
-        const url = `https://store.steampowered.com/sub/${s.packageid}/?cc=BR`;
-        return { name, price, discount, url };
-      });
+        ),
+        price: "R$ " + (s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ","),
+        discount: s.percent_savings > 0 ? `-${s.percent_savings}%` : null,
+        url: `https://store.steampowered.com/sub/${s.packageid}/?cc=BR`,
+      }));
+
+    return { ...base, editions: editions.length > 0 ? editions : undefined };
   } catch {
-    return [];
+    return { price: "N/A", discount: null, url: storeUrl };
   }
 }
 
@@ -201,23 +186,13 @@ async function fetchNuuvem(name: string): Promise<StorePrice> {
 // ── Route ────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const { name, appid } = (await req.json()) as { name?: string; appid?: string };
-  if (!appid) {
-    return NextResponse.json({ error: "Missing game appid" }, { status: 400 });
-  }
-  if (!name) {
-    return NextResponse.json({ error: "Missing game name" }, { status: 400 });
-  }
+  if (!appid) return NextResponse.json({ error: "Missing game appid" }, { status: 400 });
+  if (!name)  return NextResponse.json({ error: "Missing game name" },  { status: 400 });
 
-  const [steamBase, nuuvem] = await Promise.all([
+  const [steam, nuuvem] = await Promise.all([
     fetchSteam(appid),
     fetchNuuvem(name),
   ]);
-
-  const steamEditions = appid ? await fetchSteamEditions(appid) : [];
-  const steam: StorePrice = {
-    ...steamBase,
-    editions: steamEditions.length > 0 ? steamEditions : undefined,
-  };
 
   return NextResponse.json({ prices: { steam, nuuvem } });
 }
