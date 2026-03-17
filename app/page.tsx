@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Game, GamePrices, StorePrice, SteamSuggestion, STORES } from "@/lib/types";
 import { loadGames, saveGames } from "@/lib/storage";
+import { gameKey } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
 import StoreFilter from "@/components/StoreFilter";
 import GameCard from "@/components/GameCard";
@@ -23,7 +24,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
-  const key = props.game.appid || props.game.name;
+  const key = gameKey(props.game);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: key });
 
@@ -60,11 +61,12 @@ export default function HomePage() {
     saveGames(updated);
   }, []);
 
-  function fetchPrices(game: Game, matchFn: (g: Game) => boolean): Promise<void> {
+  async function fetchPrices(game: Game): Promise<void> {
+    const key = gameKey(game);
     const update = (storeId: keyof GamePrices, price: StorePrice) =>
       setGames((prev) => {
         const next = prev.map((g) =>
-          matchFn(g) ? { ...g, prices: { ...g.prices, [storeId]: price }, lastFetched: Date.now() } : g
+          gameKey(g) === key ? { ...g, prices: { ...g.prices, [storeId]: price }, lastFetched: Date.now() } : g
         );
         saveGames(next);
         return next;
@@ -82,11 +84,11 @@ export default function HomePage() {
       body: JSON.stringify({ name: game.name }),
     }).then((r) => r.json()).then((d) => { if (d.price) update("nuuvem", d.price); }).catch(() => {});
 
-    return Promise.all([steam, nuuvem]).then(() => {});
+    await Promise.all([steam, nuuvem]);
   }
 
   async function addGame(input: SteamSuggestion | { name: string; appid: string; img: string }) {
-    const existing = games.find((g) => (g.appid && g.appid === input.appid) || g.name === input.name);
+    const existing = games.find((g) => gameKey(g) === gameKey(input));
     if (existing) {
       setStatus(`"${input.name}" is already in your list.`);
       setTimeout(() => setStatus(""), 3000);
@@ -100,15 +102,13 @@ export default function HomePage() {
     }
 
     let resolved = { ...input };
-    if (input.appid) {
-      try {
-        const res = await fetch(`/api/game-details?appid=${input.appid}`);
-        const data = await res.json();
-        if (data.name) resolved = { ...resolved, name: data.name, img: data.img };
-      } catch { /* fall back to suggestion data */ }
-    }
+    try {
+      const res = await fetch(`/api/game-details?appid=${input.appid}`);
+      const data = await res.json();
+      if (data.name) resolved = { ...resolved, name: data.name, img: data.img };
+    } catch { /* fall back to suggestion data */ }
 
-    const key = resolved.appid || resolved.name;
+    const key = gameKey(resolved);
     const newGame: Game = {
       ...resolved,
       prices: {},
@@ -121,7 +121,7 @@ export default function HomePage() {
     setRefreshingKeys((prev) => new Set(prev).add(key));
 
     try {
-      await fetchPrices(newGame, (g) => (g.appid && g.appid === input.appid) || g.name === input.name);
+      await fetchPrices(newGame);
       setStatus("");
     } catch {
       setStatus(`Could not fetch prices for "${input.name}".`);
@@ -132,13 +132,13 @@ export default function HomePage() {
   }
 
   async function refreshOne(key: string) {
-    const game = games.find((g) => (g.appid || g.name) === key);
+    const game = games.find((g) => gameKey(g) === key);
     if (!game) return;
     setRefreshingKeys((prev) => new Set(prev).add(key));
-    setGames((prev) => prev.map((g) => (g.appid || g.name) === key ? { ...g, prices: {} } : g));
+    setGames((prev) => prev.map((g) => gameKey(g) === key ? { ...g, prices: {} } : g));
     setStatus(`Refreshing "${game.name}"…`);
     try {
-      await fetchPrices(game, (g) => (g.appid || g.name) === key);
+      await fetchPrices(game);
       setStatus("");
     } catch {
       setStatus(`Failed to refresh "${game.name}".`);
@@ -155,12 +155,12 @@ export default function HomePage() {
     for (let i = 0; i < games.length; i++) {
       const game = games[i];
       if (!game) continue;
-      const key = game.appid || game.name;
+      const key = gameKey(game);
       setRefreshingKeys((prev) => new Set(prev).add(key));
-      setGames((prev) => prev.map((g) => (g.appid || g.name) === key ? { ...g, prices: {} } : g));
+      setGames((prev) => prev.map((g) => gameKey(g) === key ? { ...g, prices: {} } : g));
       setStatus(`Fetching prices: ${game.name} (${i + 1}/${games.length})`);
       setProgress(Math.round((i / games.length) * 100));
-      await fetchPrices(game, (g) => (g.appid || g.name) === key).catch(() => {});
+      await fetchPrices(game).catch(() => {});
       setRefreshingKeys((prev) => { const s = new Set(prev); s.delete(key); return s; });
       await new Promise((r) => setTimeout(r, 500));
     }
@@ -172,14 +172,13 @@ export default function HomePage() {
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = games.findIndex((g) => (g.appid || g.name) === active.id);
-    const newIndex = games.findIndex((g) => (g.appid || g.name) === over.id);
+    const oldIndex = games.findIndex((g) => gameKey(g) === active.id);
+    const newIndex = games.findIndex((g) => gameKey(g) === over.id);
     persistGames(arrayMove(games, oldIndex, newIndex));
   }
 
   function removeGame(key: string) {
-    const updated = games.filter((g) => (g.appid || g.name) !== key);
-    persistGames(updated);
+    persistGames(games.filter((g) => gameKey(g) !== key));
   }
 
   function clearAll() {
@@ -267,10 +266,10 @@ export default function HomePage() {
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={games.map((g) => g.appid || g.name)} strategy={rectSortingStrategy}>
+          <SortableContext items={games.map(gameKey)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {games.map((game) => {
-                const key = game.appid || game.name;
+                const key = gameKey(game);
                 return (
                   <SortableGameCard
                     key={key}

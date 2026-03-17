@@ -1,3 +1,5 @@
+export const gameKey = (g: { appid?: string; name: string }): string => g.appid || g.name;
+
 export function stripGamePrefix(editionTitle: string, baseName: string): string {
   const norm = (s: string) =>
     s.replace(/[™®©]/g, "").replace(/[:\-–—]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
@@ -32,7 +34,7 @@ export function parseGameInput(val: string):
 }
 
 export function bestDeal(
-  prices: Record<string, { price?: string | null }>
+  prices: Partial<Record<string, { price?: string | null }>>
 ): string | null {
   let bestVal: number | null = null;
   let bestStore: string | null = null;

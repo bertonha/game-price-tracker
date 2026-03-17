@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Game, STORES, StoreId } from "@/lib/types";
-import { timeAgo, bestDeal } from "@/lib/utils";
+import { timeAgo, bestDeal, gameKey } from "@/lib/utils";
 
 interface Props {
   game: Game;
@@ -51,8 +51,8 @@ export default function GameCard({
   refreshing,
   dragHandleProps,
 }: Props) {
-  const key = game.appid || game.name;
-  const best = bestDeal(game.prices as Record<string, { price?: string | null }>);
+  const key = gameKey(game);
+  const best = bestDeal(game.prices);
 
   const visibleStores = STORES.filter((s) => activeStores.has(s.id));
 

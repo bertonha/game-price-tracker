@@ -14,6 +14,8 @@ export async function getBrowser(): Promise<Browser> {
 // data-price JSON shape on .mod-price elements:
 //   { iv: <int original price in reais>, e: <discounted cents | null>, v: <current cents> }
 
+const NUUVEM_EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
+
 function toNuuvemSlug(name: string): string {
   return name
     .toLowerCase()
@@ -42,8 +44,6 @@ async function fetchNuuvemBySlug(slug: string, name: string): Promise<StorePrice
     } catch {
       return null;
     }
-
-    const NUUVEM_EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
 
     const result = await page.evaluate(
       ({ url, excludePattern }: { url: string; excludePattern: string }) => {
@@ -161,8 +161,6 @@ async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
         return { i, score, title: titleText, price, discount };
       });
     }, name);
-
-    const NUUVEM_EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
 
     // Keep cards with a positive match score, sort best first, cap at 4.
     const topCards = scoredCards
