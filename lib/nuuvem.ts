@@ -11,6 +11,24 @@ export async function getBrowser(): Promise<Browser> {
   return _browser;
 }
 
+// Limit concurrent Chromium pages to avoid OOM when refreshing many games at once.
+const MAX_CONCURRENT_PAGES = parseInt(process.env.NUUVEM_MAX_CONCURRENT_PAGES ?? "2", 10);
+let _running = 0;
+const _queue: Array<() => void> = [];
+
+async function withPageLimit<T>(fn: () => Promise<T>): Promise<T> {
+  if (_running >= MAX_CONCURRENT_PAGES) {
+    await new Promise<void>((resolve) => _queue.push(resolve));
+  }
+  _running++;
+  try {
+    return await fn();
+  } finally {
+    _running--;
+    _queue.shift()?.();
+  }
+}
+
 // data-price JSON shape on .mod-price elements:
 //   { iv: <int original price in reais>, e: <discounted cents | null>, v: <current cents> }
 
@@ -186,8 +204,10 @@ async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
 }
 
 export async function fetchNuuvem(name: string): Promise<StorePrice> {
-  const slug = toNuuvemSlug(name);
-  const bySlug = await fetchNuuvemBySlug(slug, name);
-  if (bySlug) return bySlug;
-  return fetchNuuvemBySearch(name);
+  return withPageLimit(async () => {
+    const slug = toNuuvemSlug(name);
+    const bySlug = await fetchNuuvemBySlug(slug, name);
+    if (bySlug) return bySlug;
+    return fetchNuuvemBySearch(name);
+  });
 }
