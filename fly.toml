@@ -38,5 +38,5 @@ primary_region = 'gru'
     path = '/'
 
 [[vm]]
-  size = 'shared-cpu-1x'
-  memory = '1gb'
+  size = 'shared-cpu-2x'
+  memory = '512mb'
