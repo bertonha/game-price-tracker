@@ -152,18 +152,24 @@ export default function HomePage() {
     if (!games.length) return;
     setProgress(0);
     setStatus(`Refreshing all ${games.length} games…`);
-    for (let i = 0; i < games.length; i++) {
-      const game = games[i];
-      if (!game) continue;
-      const key = gameKey(game);
-      setRefreshingKeys((prev) => new Set(prev).add(key));
-      setGames((prev) => prev.map((g) => gameKey(g) === key ? { ...g, prices: {} } : g));
-      setStatus(`Fetching prices: ${game.name} (${i + 1}/${games.length})`);
-      setProgress(Math.round((i / games.length) * 100));
-      await fetchPrices(game).catch(() => {});
-      setRefreshingKeys((prev) => { const s = new Set(prev); s.delete(key); return s; });
-      await new Promise((r) => setTimeout(r, 500));
-    }
+    let completed = 0;
+    const total = games.length;
+
+    // Mark all as refreshing and clear prices upfront
+    const allKeys = games.map(gameKey);
+    setRefreshingKeys(new Set(allKeys));
+    setGames((prev) => prev.map((g) => ({ ...g, prices: {} })));
+
+    await Promise.all(
+      games.map(async (game) => {
+        const key = gameKey(game);
+        await fetchPrices(game).catch(() => {});
+        setRefreshingKeys((prev) => { const s = new Set(prev); s.delete(key); return s; });
+        completed++;
+        setProgress(Math.round((completed / total) * 100));
+      })
+    );
+
     setProgress(100);
     setStatus("All prices updated.");
     setTimeout(() => { setProgress(null); setStatus(""); }, 2500);
