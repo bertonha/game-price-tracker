@@ -49,27 +49,21 @@ async function fetchNuuvemBySlug(slug: string, name: string): Promise<StorePrice
       ({ url, excludePattern }: { url: string; excludePattern: string }) => {
         const EXCLUDE = new RegExp(excludePattern, "i");
 
-        function parseModPrice(el: Element | null): { price: string; discount: string | null } {
-          if (!el) return { price: "N/A", discount: null };
+        function parseModPrice(el: Element | null): { price: string } {
+          if (!el) return { price: "N/A" };
           const raw = el.getAttribute("data-price");
-          if (!raw) return { price: "N/A", discount: null };
+          if (!raw) return { price: "N/A" };
           const p = JSON.parse(raw) as { iv: number; e: number | null; v: number };
           const cents = p.v ?? p.iv * 100;
           const price = "R$ " + (cents / 100).toFixed(2).replace(".", ",");
-          let discount: string | null = null;
-          if (p.e != null && p.iv > 0) {
-            const origCents = p.iv * 100;
-            const pct = Math.round(((origCents - p.e) / origCents) * 100);
-            if (pct > 0) discount = `-${pct}%`;
-          }
-          return { price, discount };
+          return { price };
         }
 
         // Main product price: first .mod-price NOT inside a .game-card
         const mainPriceEl =
           document.querySelector(".mod-price:not(.game-card .mod-price)") ??
           document.querySelector(".mod-price");
-        const { price, discount } = parseModPrice(mainPriceEl);
+        const { price } = parseModPrice(mainPriceEl);
         if (price === "N/A") return null;
 
         // Edition cards listed on the same page
@@ -81,15 +75,14 @@ async function fetchNuuvemBySlug(slug: string, name: string): Promise<StorePrice
         const editions = editionCards
           .map((card) => {
             const name = card.querySelector(".game-card__product-name")?.textContent?.trim() ?? "";
-            const { price: ePrice, discount: eDiscount } = parseModPrice(card.querySelector(".mod-price"));
+            const { price: ePrice } = parseModPrice(card.querySelector(".mod-price"));
             const cardUrl = (card.querySelector("a") as HTMLAnchorElement | null)?.href ?? url;
-            return { name, price: ePrice, discount: eDiscount, url: cardUrl };
+            return { name, price: ePrice, url: cardUrl };
           })
           .filter((e) => e.price !== "N/A" && e.price !== price);
 
         return {
           price,
-          discount,
           url,
           editions: editions.length > 0 ? editions : undefined,
         } as StorePrice;
@@ -143,22 +136,16 @@ async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
           : null;
 
         let price = "N/A";
-        let discount: string | null = null;
         if (priceJson) {
           const currentCents = priceJson.v ?? priceJson.iv * 100;
           price = "R$ " + (currentCents / 100).toFixed(2).replace(".", ",");
-          if (priceJson.e != null && priceJson.iv > 0) {
-            const originalCents = priceJson.iv * 100;
-            const pct = Math.round(((originalCents - priceJson.e) / originalCents) * 100);
-            if (pct > 0) discount = `-${pct}%`;
-          }
         } else {
           const text = card.querySelector(".product-price--val")?.textContent ?? "";
           const matches = text.match(/R\$\s*[\d.,]+/g);
           price = matches?.at(-1)?.replace(/\s+/g, " ").trim() ?? "N/A";
         }
 
-        return { i, score, title: titleText, price, discount };
+        return { i, score, title: titleText, price };
       });
     }, name);
 
@@ -168,18 +155,18 @@ async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
       .sort((a, b) => b.score - a.score)
       .slice(0, 4);
 
-    if (topCards.length === 0) return { price: "N/A", discount: null, url: searchUrl };
+    if (topCards.length === 0) return { price: "N/A", url: searchUrl };
 
     // Resolve each card's product URL by clicking and going back.
-    const resolved: { title: string; price: string; discount: string | null; url: string }[] = [];
+    const resolved: { title: string; price: string; url: string }[] = [];
     for (const card of topCards) {
       try {
         await page.locator(".game-card").nth(card.i).click();
         await page.waitForURL(/\/item\//, { timeout: 10000 });
-        resolved.push({ title: card.title, price: card.price, discount: card.discount, url: page.url() });
+        resolved.push({ title: card.title, price: card.price, url: page.url() });
         await page.goBack({ waitUntil: "networkidle", timeout: 15000 });
       } catch {
-        resolved.push({ title: card.title, price: card.price, discount: card.discount, url: searchUrl });
+        resolved.push({ title: card.title, price: card.price, url: searchUrl });
       }
     }
 
@@ -188,14 +175,13 @@ async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
     const editions = rest.filter((r) => r.price !== base!.price);
     return {
       price: base!.price,
-      discount: base!.discount,
       url: base!.url,
       editions: editions.length > 0
-        ? editions.map((r) => ({ name: stripGamePrefix(r.title, base!.title), price: r.price, discount: r.discount, url: r.url }))
+        ? editions.map((r) => ({ name: stripGamePrefix(r.title, base!.title), price: r.price, url: r.url }))
         : undefined,
     };
   } catch {
-    return { price: "N/A", discount: null, url: searchUrl };
+    return { price: "N/A", url: searchUrl };
   } finally {
     await page.close();
   }

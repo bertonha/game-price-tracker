@@ -1,13 +1,11 @@
 export interface Edition {
   name: string;
   price: string | null;
-  discount: string | null;
   url: string | null;
 }
 
 export interface StorePrice {
   price: string | null;
-  discount: string | null;
   url: string | null;
   editions?: Edition[];
 }

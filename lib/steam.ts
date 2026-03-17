@@ -16,12 +16,12 @@ export async function fetchSteam(appid: string, name: string): Promise<StorePric
       `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=BR`,
       { next: { revalidate: 3600 } }
     );
-    if (!res.ok) return { price: "N/A", discount: null, url: storeUrl };
+    if (!res.ok) return { price: "N/A", url: storeUrl };
 
     const json = (await res.json()) as Record<string, {
       data?: {
         is_free?: boolean;
-        price_overview?: { final_formatted: string; discount_percent: number };
+        price_overview?: { final_formatted: string };
         package_groups?: {
           subs?: {
             packageid: number;
@@ -34,18 +34,14 @@ export async function fetchSteam(appid: string, name: string): Promise<StorePric
     }>;
 
     const data = json[appid]?.data;
-    if (!data) return { price: "N/A", discount: null, url: storeUrl };
+    if (!data) return { price: "N/A", url: storeUrl };
 
-    if (data.is_free) return { price: "Free to Play", discount: null, url: storeUrl };
+    if (data.is_free) return { price: "Free to Play", url: storeUrl };
 
     const overview = data.price_overview;
     const base: StorePrice = overview
-      ? {
-          price: overview.final_formatted,
-          discount: overview.discount_percent > 0 ? `-${overview.discount_percent}%` : null,
-          url: storeUrl,
-        }
-      : { price: "N/A", discount: null, url: storeUrl };
+      ? { price: overview.final_formatted, url: storeUrl }
+      : { price: "N/A", url: storeUrl };
 
     // Editions from package_groups
     const allPaidSubs = (data.package_groups ?? [])
@@ -60,12 +56,11 @@ export async function fetchSteam(appid: string, name: string): Promise<StorePric
           s.option_text.replace(/\s*-\s*R\$[\s\d,.]+$/, "").replace(/<[^>]+>/g, "").trim()
         ), name),
         price: "R$ " + (s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ","),
-        discount: s.percent_savings > 0 ? `-${s.percent_savings}%` : null,
         url: `https://store.steampowered.com/sub/${s.packageid}/?cc=BR`,
       }));
 
     return { ...base, editions: editions.length > 0 ? editions : undefined };
   } catch {
-    return { price: "N/A", discount: null, url: storeUrl };
+    return { price: "N/A", url: storeUrl };
   }
 }

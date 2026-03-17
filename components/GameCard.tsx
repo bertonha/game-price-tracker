@@ -15,12 +15,10 @@ interface Props {
 
 function PriceCell({
   price,
-  discount,
   url,
   isBest,
 }: {
   price: string;
-  discount: string | null;
   url: string | null;
   isBest: boolean;
 }) {
@@ -29,11 +27,6 @@ function PriceCell({
       <span className={`font-medium ${isBest ? "text-emerald-600 dark:text-emerald-400" : ""}`}>
         {price}
       </span>
-      {discount && (
-        <span className="bg-emerald-600 text-white text-[10px] px-1 py-0.5 rounded font-semibold">
-          {discount}
-        </span>
-      )}
       {url && (
         <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-[10px]">
           view ↗
@@ -130,7 +123,7 @@ export default function GameCard({
                   ) : !info.price || info.price === "N/A" ? (
                     <span className="text-gray-400">N/A</span>
                   ) : (
-                    <PriceCell price={info.price} discount={info.discount} url={info.url} isBest={!!isBest} />
+                    <PriceCell price={info.price} url={info.url} isBest={!!isBest} />
                   )}
                 </div>
                 {/* Edition sub-rows */}
@@ -144,7 +137,7 @@ export default function GameCard({
                     {!ed.price || ed.price === "N/A" ? (
                       <span className="text-gray-400">N/A</span>
                     ) : (
-                      <PriceCell price={ed.price} discount={ed.discount} url={ed.url} isBest={false} />
+                      <PriceCell price={ed.price} url={ed.url} isBest={false} />
                     )}
                   </div>
                   );
