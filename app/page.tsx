@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Game, GamePrices, SteamSuggestion, STORES } from "@/lib/types";
+import { Game, GamePrices, StorePrice, SteamSuggestion, STORES } from "@/lib/types";
 import { loadGames, saveGames } from "@/lib/storage";
 import SearchBar from "@/components/SearchBar";
 import StoreFilter from "@/components/StoreFilter";
@@ -60,15 +60,29 @@ export default function HomePage() {
     saveGames(updated);
   }, []);
 
-  async function fetchPrices(game: Game): Promise<Partial<GamePrices>> {
-    const res = await fetch("/api/fetch-prices", {
+  function fetchPrices(game: Game, matchFn: (g: Game) => boolean): Promise<void> {
+    const update = (storeId: keyof GamePrices, price: StorePrice) =>
+      setGames((prev) => {
+        const next = prev.map((g) =>
+          matchFn(g) ? { ...g, prices: { ...g.prices, [storeId]: price }, lastFetched: Date.now() } : g
+        );
+        saveGames(next);
+        return next;
+      });
+
+    const steam = fetch("/api/fetch-prices/steam", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: game.name, appid: game.appid }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Failed to fetch prices");
-    return data.prices as Partial<GamePrices>;
+    }).then((r) => r.json()).then((d) => { if (d.price) update("steam", d.price); }).catch(() => {});
+
+    const nuuvem = fetch("/api/fetch-prices/nuuvem", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: game.name }),
+    }).then((r) => r.json()).then((d) => { if (d.price) update("nuuvem", d.price); }).catch(() => {});
+
+    return Promise.all([steam, nuuvem]).then(() => {});
   }
 
   async function addGame(input: SteamSuggestion | { name: string; appid: string; img: string }) {
@@ -107,16 +121,7 @@ export default function HomePage() {
     setRefreshingKeys((prev) => new Set(prev).add(key));
 
     try {
-      const prices = await fetchPrices(newGame);
-      setGames((prev) => {
-        const next = prev.map((g) =>
-          (g.appid && g.appid === input.appid) || g.name === input.name
-            ? { ...g, prices, lastFetched: Date.now() }
-            : g
-        );
-        saveGames(next);
-        return next;
-      });
+      await fetchPrices(newGame, (g) => (g.appid && g.appid === input.appid) || g.name === input.name);
       setStatus("");
     } catch {
       setStatus(`Could not fetch prices for "${input.name}".`);
@@ -130,16 +135,10 @@ export default function HomePage() {
     const game = games.find((g) => (g.appid || g.name) === key);
     if (!game) return;
     setRefreshingKeys((prev) => new Set(prev).add(key));
+    setGames((prev) => prev.map((g) => (g.appid || g.name) === key ? { ...g, prices: {} } : g));
     setStatus(`Refreshing "${game.name}"…`);
     try {
-      const prices = await fetchPrices(game);
-      setGames((prev) => {
-        const next = prev.map((g) =>
-          (g.appid || g.name) === key ? { ...g, prices, lastFetched: Date.now() } : g
-        );
-        saveGames(next);
-        return next;
-      });
+      await fetchPrices(game, (g) => (g.appid || g.name) === key);
       setStatus("");
     } catch {
       setStatus(`Failed to refresh "${game.name}".`);
@@ -158,18 +157,10 @@ export default function HomePage() {
       if (!game) continue;
       const key = game.appid || game.name;
       setRefreshingKeys((prev) => new Set(prev).add(key));
+      setGames((prev) => prev.map((g) => (g.appid || g.name) === key ? { ...g, prices: {} } : g));
       setStatus(`Fetching prices: ${game.name} (${i + 1}/${games.length})`);
       setProgress(Math.round((i / games.length) * 100));
-      try {
-        const prices = await fetchPrices(game);
-        setGames((prev) => {
-          const next = prev.map((g) =>
-            (g.appid || g.name) === key ? { ...g, prices, lastFetched: Date.now() } : g
-          );
-          saveGames(next);
-          return next;
-        });
-      } catch { /* continue on error */ }
+      await fetchPrices(game, (g) => (g.appid || g.name) === key).catch(() => {});
       setRefreshingKeys((prev) => { const s = new Set(prev); s.delete(key); return s; });
       await new Promise((r) => setTimeout(r, 500));
     }
