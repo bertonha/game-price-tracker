@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - STEAM_COUNTRY=${STEAM_COUNTRY:-BR}
+      - STEAM_LANGUAGE=${STEAM_LANGUAGE:-portuguese}
+    restart: unless-stopped
