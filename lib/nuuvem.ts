@@ -27,6 +27,14 @@ function toNuuvemSlug(name: string): string {
 }
 
 
+async function blockAssets(page: import("playwright").Page) {
+  await page.route("**/*", (route) => {
+    const type = route.request().resourceType();
+    if (["image", "font", "stylesheet", "media"].includes(type)) route.abort();
+    else route.continue();
+  });
+}
+
 // Try to fetch price directly from the Nuuvem item page (faster, gives editions too).
 // Returns null if the page doesn't exist or can't be parsed.
 async function fetchNuuvemBySlug(slug: string, name: string): Promise<StorePrice | null> {
@@ -34,13 +42,14 @@ async function fetchNuuvemBySlug(slug: string, name: string): Promise<StorePrice
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
-    const response = await page.goto(itemUrl, { waitUntil: "networkidle", timeout: 20000 });
+    await blockAssets(page);
+    const response = await page.goto(itemUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
     if (!response || response.status() === 404) return null;
     // Redirected away from an item page means slug didn't match
     if (!page.url().includes("/item/")) return null;
 
     try {
-      await page.waitForSelector(".mod-price", { timeout: 10000 });
+      await page.waitForSelector(".mod-price", { timeout: 15000 });
     } catch {
       return null;
     }
@@ -109,8 +118,9 @@ async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
-    await page.goto(searchUrl, { waitUntil: "networkidle", timeout: 20000 });
-    await page.waitForSelector(".game-card", { timeout: 10000 });
+    await blockAssets(page);
+    await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await page.waitForSelector(".game-card", { timeout: 15000 });
 
     // Score all cards; return index + extracted price data for each.
     const scoredCards = await page.evaluate((gameName: string) => {
@@ -118,7 +128,7 @@ async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
       const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
       const queryWords = normalize(gameName).split(/\s+/).filter(w => w.length > 1 && !STOP_WORDS.has(w));
 
-      return Array.from(document.querySelectorAll(".game-card")).map((card, i) => {
+      return Array.from(document.querySelectorAll(".game-card")).map((card) => {
         const available = card.classList.contains("product__available") ? 0.5 : 0;
         const titleEl = card.querySelector(".game-card__product-name");
         const titleText = titleEl?.textContent?.trim() ?? "";
@@ -145,7 +155,8 @@ async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
           price = matches?.at(-1)?.replace(/\s+/g, " ").trim() ?? "N/A";
         }
 
-        return { i, score, title: titleText, price };
+        const cardUrl = (card.querySelector("a") as HTMLAnchorElement | null)?.href ?? "";
+        return { score, title: titleText, price, url: cardUrl };
       });
     }, name);
 
@@ -157,27 +168,14 @@ async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
 
     if (topCards.length === 0) return { price: "N/A", url: searchUrl };
 
-    // Resolve each card's product URL by clicking and going back.
-    const resolved: { title: string; price: string; url: string }[] = [];
-    for (const card of topCards) {
-      try {
-        await page.locator(".game-card").nth(card.i).click();
-        await page.waitForURL(/\/item\//, { timeout: 10000 });
-        resolved.push({ title: card.title, price: card.price, url: page.url() });
-        await page.goBack({ waitUntil: "networkidle", timeout: 15000 });
-      } catch {
-        resolved.push({ title: card.title, price: card.price, url: searchUrl });
-      }
-    }
-
-    const [base, ...rest] = resolved;
+    const [base, ...rest] = topCards;
     // Drop editions with same price as base (duplicate listings)
-    const editions = rest.filter((r) => r.price !== base!.price);
+    const editions = rest.filter((r) => r.price !== base.price);
     return {
-      price: base!.price,
-      url: base!.url,
+      price: base.price,
+      url: base.url || searchUrl,
       editions: editions.length > 0
-        ? editions.map((r) => ({ name: stripGamePrefix(r.title, base!.title), price: r.price, url: r.url }))
+        ? editions.map((r) => ({ name: stripGamePrefix(r.title, base.title), price: r.price, url: r.url || searchUrl }))
         : undefined,
     };
   } catch {
