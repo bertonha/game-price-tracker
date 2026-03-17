@@ -87,7 +87,96 @@ async function fetchSteam(appid: string): Promise<StorePrice> {
 //
 // data-price JSON shape on .mod-price elements:
 //   { iv: <int original price in reais>, e: <discounted cents | null>, v: <current cents> }
-async function fetchNuuvem(name: string): Promise<StorePrice> {
+
+function toNuuvemSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[™®©]/g, "")
+    .replace(/[:\-–—]/g, " ")
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+// Try to fetch price directly from the Nuuvem item page (faster, gives editions too).
+// Returns null if the page doesn't exist or can't be parsed.
+async function fetchNuuvemBySlug(slug: string): Promise<StorePrice | null> {
+  const itemUrl = `https://www.nuuvem.com/br-pt/item/${slug}`;
+  const browser = await getBrowser();
+  const page = await browser.newPage();
+  try {
+    const response = await page.goto(itemUrl, { waitUntil: "networkidle", timeout: 20000 });
+    if (!response || response.status() === 404) return null;
+    // Redirected away from an item page means slug didn't match
+    if (!page.url().includes("/item/")) return null;
+
+    try {
+      await page.waitForSelector(".mod-price", { timeout: 10000 });
+    } catch {
+      return null;
+    }
+
+    const NUUVEM_EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
+
+    return await page.evaluate(
+      ({ url, excludePattern }: { url: string; excludePattern: string }) => {
+        const EXCLUDE = new RegExp(excludePattern, "i");
+
+        function parseModPrice(el: Element | null): { price: string; discount: string | null } {
+          if (!el) return { price: "N/A", discount: null };
+          const raw = el.getAttribute("data-price");
+          if (!raw) return { price: "N/A", discount: null };
+          const p = JSON.parse(raw) as { iv: number; e: number | null; v: number };
+          const cents = p.v ?? p.iv * 100;
+          const price = "R$ " + (cents / 100).toFixed(2).replace(".", ",");
+          let discount: string | null = null;
+          if (p.e != null && p.iv > 0) {
+            const origCents = p.iv * 100;
+            const pct = Math.round(((origCents - p.e) / origCents) * 100);
+            if (pct > 0) discount = `-${pct}%`;
+          }
+          return { price, discount };
+        }
+
+        // Main product price: first .mod-price NOT inside a .game-card
+        const mainPriceEl =
+          document.querySelector(".mod-price:not(.game-card .mod-price)") ??
+          document.querySelector(".mod-price");
+        const { price, discount } = parseModPrice(mainPriceEl);
+        if (price === "N/A") return null;
+
+        // Edition cards listed on the same page
+        const editionCards = Array.from(document.querySelectorAll(".game-card")).filter((card) => {
+          const title = card.querySelector(".game-card__product-name")?.textContent?.trim() ?? "";
+          return !EXCLUDE.test(title);
+        });
+
+        const editions = editionCards
+          .map((card) => {
+            const name = card.querySelector(".game-card__product-name")?.textContent?.trim() ?? "";
+            const { price: ePrice, discount: eDiscount } = parseModPrice(card.querySelector(".mod-price"));
+            const cardUrl = (card.querySelector("a") as HTMLAnchorElement | null)?.href ?? url;
+            return { name, price: ePrice, discount: eDiscount, url: cardUrl };
+          })
+          .filter((e) => e.price !== "N/A" && e.price !== price);
+
+        return {
+          price,
+          discount,
+          url,
+          editions: editions.length > 0 ? editions : undefined,
+        } as StorePrice;
+      },
+      { url: itemUrl, excludePattern: NUUVEM_EXCLUDE.source }
+    );
+  } catch {
+    return null;
+  } finally {
+    await page.close();
+  }
+}
+
+async function fetchNuuvemBySearch(name: string): Promise<StorePrice> {
   // Strip special chars (colons, dashes, etc.) — they break Nuuvem's path-based search
   const cleanName = name.replace(/[:\-–]/g, " ").replace(/\s+/g, " ").trim();
   const q = encodeURIComponent(cleanName);
@@ -181,6 +270,13 @@ async function fetchNuuvem(name: string): Promise<StorePrice> {
   } finally {
     await page.close();
   }
+}
+
+async function fetchNuuvem(name: string): Promise<StorePrice> {
+  const slug = toNuuvemSlug(name);
+  const bySlug = await fetchNuuvemBySlug(slug);
+  if (bySlug) return bySlug;
+  return fetchNuuvemBySearch(name);
 }
 
 // ── Route ────────────────────────────────────────────────────────────────────
