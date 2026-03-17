@@ -1,5 +1,6 @@
 import { chromium, type Browser } from "playwright";
 import type { Edition, StorePrice } from "@/lib/types";
+import { stripGamePrefix } from "@/lib/utils";
 
 // Reuse a single browser process across requests (avoids ~2s cold-start per call).
 let _browser: Browser | null = null;
@@ -23,21 +24,6 @@ function toNuuvemSlug(name: string): string {
     .replace(/\s+/g, "-");
 }
 
-// Strip the base game name prefix from an edition title.
-// e.g. ("LEGO Star Wars™: The Skywalker Saga Deluxe Edition", "LEGO Star Wars™: The Skywalker Saga")
-//   → "Deluxe Edition"
-function stripGamePrefix(editionTitle: string, baseName: string): string {
-  const norm = (s: string) =>
-    s.replace(/[™®©]/g, "").replace(/[:\-–—]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-  const normBase = norm(baseName);
-  const normEdition = norm(editionTitle);
-  if (!normEdition.startsWith(normBase)) return editionTitle;
-  const remaining = normEdition.slice(normBase.length).trim();
-  if (!remaining) return editionTitle;
-  const remainingWordCount = remaining.split(/\s+/).length;
-  const origWords = editionTitle.trim().split(/\s+/);
-  return origWords.slice(origWords.length - remainingWordCount).join(" ");
-}
 
 // Try to fetch price directly from the Nuuvem item page (faster, gives editions too).
 // Returns null if the page doesn't exist or can't be parsed.

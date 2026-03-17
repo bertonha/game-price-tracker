@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   if (!name)  return NextResponse.json({ error: "Missing game name" },  { status: 400 });
 
   const [steam, nuuvem] = await Promise.all([
-    fetchSteam(appid),
+    fetchSteam(appid, name),
     fetchNuuvem(name),
   ]);
 

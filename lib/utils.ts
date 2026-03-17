@@ -1,3 +1,16 @@
+export function stripGamePrefix(editionTitle: string, baseName: string): string {
+  const norm = (s: string) =>
+    s.replace(/[™®©]/g, "").replace(/[:\-–—]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  const normBase = norm(baseName);
+  const normEdition = norm(editionTitle);
+  if (!normEdition.startsWith(normBase)) return editionTitle;
+  const remaining = normEdition.slice(normBase.length).trim();
+  if (!remaining) return editionTitle;
+  const remainingWordCount = remaining.split(/\s+/).length;
+  const origWords = editionTitle.trim().split(/\s+/);
+  return origWords.slice(origWords.length - remainingWordCount).join(" ");
+}
+
 export function timeAgo(ts: number): string {
   const s = Math.floor((Date.now() - ts) / 1000);
   if (s < 60) return "just now";
