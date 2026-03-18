@@ -5,7 +5,7 @@ Compare game prices across **Steam BR** and **Nuuvem** — focused on the Brazil
 ## Features
 
 - Search games by name (with Steam autocomplete), Steam URL, or AppID
-- Real-time price lookup from Steam (official API) and Nuuvem (headless browser)
+- Real-time price lookup from Steam (official API) and Nuuvem (HTTP fetch)
 - Per-game refresh and bulk "refresh all" controls
 - Prices and game list persisted in `localStorage`
 - Dark mode support
@@ -22,21 +22,9 @@ cd game-price-tracker
 
 ```bash
 npm install
-npx playwright install chromium
 ```
 
-### 3. Install Playwright system dependencies
-
-**Arch Linux:**
-```bash
-sudo pacman -S nss nspr alsa-lib libxcomposite libxdamage libxfixes libxrandr libxkbcommon at-spi2-core cups libdrm mesa
-```
-
-```bash
-npx playwright install-deps chromium
-```
-
-### 4. Run the development server
+### 3. Run the development server
 
 ```bash
 npm run dev
@@ -44,7 +32,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 5. Build for production
+### 4. Build for production
 
 ```bash
 npm run build
@@ -60,10 +48,14 @@ STEAM_COUNTRY=BR
 STEAM_LANGUAGE=portuguese
 ```
 
-| Variable | Default | Description |
-|---|---|---|
-| `STEAM_COUNTRY` | `BR` | Country code for Steam pricing |
-| `STEAM_LANGUAGE` | `portuguese` | Language for Steam responses |
+| Variable         | Default      | Description                    |
+| ---------------- | ------------ | ------------------------------ |
+| `STEAM_COUNTRY`  | `BR`         | Country code for Steam pricing |
+| `STEAM_LANGUAGE` | `portuguese` | Language for Steam responses   |
+
+## Deployment
+
+The app is deployed on [Vercel](https://vercel.com). Push to `main` to trigger a new deployment.
 
 ## Project Structure
 
@@ -92,4 +84,4 @@ game-price-tracker/
 
 **Steam** — uses the public `store.steampowered.com/api/appdetails` endpoint. No key required.
 
-**Nuuvem** — uses a Playwright headless Chromium browser, since Nuuvem is a JS-rendered SPA with no public API. A single browser process is reused across requests to avoid cold-start overhead. The scraper navigates to the search results page, extracts the price from the first matching game card, then clicks through to capture the product URL.
+**Nuuvem** — uses plain HTTP `fetch` with browser-like headers. The fetcher builds a slug from the game name, hits the Nuuvem product page directly, parses the `data-price` JSON attribute from the page HTML, and retries with progressively shorter slugs when no match is found.

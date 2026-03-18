@@ -5,7 +5,9 @@ import Image from "next/image";
 import { SteamSuggestion } from "@/lib/types";
 
 interface Props {
-  onAdd: (game: SteamSuggestion | { name: string; appid: string; img: string }) => void;
+  onAdd: (
+    game: SteamSuggestion | { name: string; appid: string; img: string },
+  ) => void;
   disabled?: boolean;
 }
 
@@ -30,18 +32,31 @@ export default function SearchBar({ onAdd, disabled }: Props) {
   function handleChange(val: string) {
     setQuery(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (val.trim().length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    if (val.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
     // Don't autocomplete if it looks like a URL or appid
-    if (/store\.steampowered\.com\/app\/\d+/.test(val) || /^\d{4,8}$/.test(val.trim())) {
-      setSuggestions([]); setShowSuggestions(false); return;
+    if (
+      /store\.steampowered\.com\/app\/\d+/.test(val) ||
+      /^\d{4,8}$/.test(val.trim())
+    ) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
     }
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search-games?q=${encodeURIComponent(val)}`);
+        const res = await fetch(
+          `/api/search-games?q=${encodeURIComponent(val)}`,
+        );
         const data = await res.json();
         setSuggestions(data.results ?? []);
         setShowSuggestions(true);
-      } catch { setSuggestions([]); }
+      } catch {
+        setSuggestions([]);
+      }
     }, 300);
   }
 
@@ -67,9 +82,13 @@ export default function SearchBar({ onAdd, disabled }: Props) {
       try {
         const res = await fetch(`/api/game-details?appid=${appid}`);
         const data = await res.json();
-        if (data.name) { onAdd(data); setQuery(""); }
-        else alert("Game not found for that AppID.");
-      } catch { alert("Failed to look up game."); }
+        if (data.name) {
+          onAdd(data);
+          setQuery("");
+        } else alert("Game not found for that AppID.");
+      } catch {
+        alert("Failed to look up game.");
+      }
     } else {
       // Use first suggestion, or fetch one if not yet loaded
       const first = suggestions[0];
@@ -77,7 +96,9 @@ export default function SearchBar({ onAdd, disabled }: Props) {
         pickSuggestion(first);
       } else {
         try {
-          const res = await fetch(`/api/search-games?q=${encodeURIComponent(val)}`);
+          const res = await fetch(
+            `/api/search-games?q=${encodeURIComponent(val)}`,
+          );
           const data = await res.json();
           const top: SteamSuggestion | undefined = data.results?.[0];
           if (top) {
@@ -100,7 +121,10 @@ export default function SearchBar({ onAdd, disabled }: Props) {
           type="text"
           value={query}
           onChange={(e) => handleChange(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); if (e.key === "Escape") setShowSuggestions(false); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+            if (e.key === "Escape") setShowSuggestions(false);
+          }}
           placeholder="Game name, Steam URL, or AppID…"
           className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={disabled}
@@ -115,9 +139,18 @@ export default function SearchBar({ onAdd, disabled }: Props) {
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   {g.img && (
-                    <Image src={g.img} alt="" width={40} height={25} className="rounded object-cover flex-shrink-0" unoptimized />
+                    <Image
+                      src={g.img}
+                      alt=""
+                      width={40}
+                      height={25}
+                      className="rounded object-cover flex-shrink-0"
+                      unoptimized
+                    />
                   )}
-                  <span className="truncate text-gray-800 dark:text-gray-200">{g.name}</span>
+                  <span className="truncate text-gray-800 dark:text-gray-200">
+                    {g.name}
+                  </span>
                 </button>
               </li>
             ))}

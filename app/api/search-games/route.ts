@@ -16,7 +16,9 @@ export async function GET(req: NextRequest) {
       `&cc=${STEAM_COUNTRY}&l=${STEAM_LANGUAGE}&v=1`;
 
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; GamePriceTracker/1.0)" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; GamePriceTracker/1.0)",
+      },
       next: { revalidate: 300 },
     });
 

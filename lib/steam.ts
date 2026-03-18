@@ -4,37 +4,50 @@ import { stripGamePrefix } from "@/lib/utils";
 const STEAM_COUNTRY = process.env.STEAM_COUNTRY ?? "BR";
 const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "portuguese";
 
-const EXCLUDE_KEYWORDS = /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
+const EXCLUDE_KEYWORDS =
+  /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
 
 const decodeHtml = (s: string) =>
-  s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-   .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-   .replace(/&reg;/gi, "®").replace(/&trade;/gi, "™")
-   .replace(/&ndash;/g, "–").replace(/&mdash;/g, "—");
+  s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&reg;/gi, "®")
+    .replace(/&trade;/gi, "™")
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—");
 
-export async function fetchSteam(appid: string, name: string): Promise<StorePrice> {
+export async function fetchSteam(
+  appid: string,
+  name: string,
+): Promise<StorePrice> {
   const storeUrl = `https://store.steampowered.com/app/${appid}/?cc=${STEAM_COUNTRY}`;
   try {
     const res = await fetch(
       `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=${STEAM_COUNTRY}&l=${STEAM_LANGUAGE}`,
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 3600 } },
     );
     if (!res.ok) return { price: "N/A", url: storeUrl };
 
-    const json = (await res.json()) as Record<string, {
-      data?: {
-        is_free?: boolean;
-        price_overview?: { final_formatted: string };
-        package_groups?: {
-          subs?: {
-            packageid: number;
-            option_text: string;
-            percent_savings: number;
-            price_in_cents_with_discount: number;
+    const json = (await res.json()) as Record<
+      string,
+      {
+        data?: {
+          is_free?: boolean;
+          price_overview?: { final_formatted: string };
+          package_groups?: {
+            subs?: {
+              packageid: number;
+              option_text: string;
+              percent_savings: number;
+              price_in_cents_with_discount: number;
+            }[];
           }[];
-        }[];
-      };
-    }>;
+        };
+      }
+    >;
 
     const data = json[appid]?.data;
     if (!data) return { price: "N/A", url: storeUrl };
@@ -55,10 +68,18 @@ export async function fetchSteam(appid: string, name: string): Promise<StorePric
     const editions: Edition[] = editionSubs
       .filter((s) => !EXCLUDE_KEYWORDS.test(s.option_text))
       .map((s) => ({
-        name: stripGamePrefix(decodeHtml(
-          s.option_text.replace(/\s*-\s*R\$[\s\d,.]+$/, "").replace(/<[^>]+>/g, "").trim()
-        ), name),
-        price: "R$ " + (s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ","),
+        name: stripGamePrefix(
+          decodeHtml(
+            s.option_text
+              .replace(/\s*-\s*R\$[\s\d,.]+$/, "")
+              .replace(/<[^>]+>/g, "")
+              .trim(),
+          ),
+          name,
+        ),
+        price:
+          "R$ " +
+          (s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ","),
         url: `https://store.steampowered.com/sub/${s.packageid}/?cc=BR`,
       }));
 

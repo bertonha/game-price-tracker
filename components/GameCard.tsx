@@ -24,11 +24,18 @@ function PriceCell({
 }) {
   return (
     <span className="flex items-center gap-1 flex-wrap justify-end">
-      <span className={`font-medium ${isBest ? "text-emerald-600 dark:text-emerald-400" : ""}`}>
+      <span
+        className={`font-medium ${isBest ? "text-emerald-600 dark:text-emerald-400" : ""}`}
+      >
         {price}
       </span>
       {url && (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-[10px]">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:underline text-[10px]"
+        >
           view ↗
         </a>
       )}
@@ -105,7 +112,8 @@ export default function GameCard({
         <div className="flex flex-col gap-1.5">
           {visibleStores.map((store) => {
             const info = game.prices[store.id as StoreId];
-            const isBest = best === store.id && info?.price && info.price !== "N/A";
+            const isBest =
+              best === store.id && info?.price && info.price !== "N/A";
 
             return (
               <div key={store.id} className="flex flex-col gap-1">
@@ -117,29 +125,48 @@ export default function GameCard({
                   >
                     {store.abbr}
                   </span>
-                  <span className="flex-1 text-gray-500 truncate">{store.name}</span>
+                  <span className="flex-1 text-gray-500 truncate">
+                    {store.name}
+                  </span>
                   {!info ? (
                     <span className="text-gray-400 italic">checking…</span>
                   ) : !info.price || info.price === "N/A" ? (
                     <span className="text-gray-400">N/A</span>
                   ) : (
-                    <PriceCell price={info.price} url={info.url} isBest={!!isBest} />
+                    <PriceCell
+                      price={info.price}
+                      url={info.url}
+                      isBest={!!isBest}
+                    />
                   )}
                 </div>
                 {/* Edition sub-rows */}
                 {info?.editions?.map((ed) => {
-                  const shortName = ed.name
-                    .replace(new RegExp(`^${game.name}\\s*[-–]?\\s*`, "i"), "")
-                    .trim() || ed.name;
+                  const shortName =
+                    ed.name
+                      .replace(
+                        new RegExp(`^${game.name}\\s*[-–]?\\s*`, "i"),
+                        "",
+                      )
+                      .trim() || ed.name;
                   return (
-                  <div key={ed.name} className="flex items-center gap-2 text-xs pl-7">
-                    <span className="flex-1 text-gray-400 truncate italic">{shortName}</span>
-                    {!ed.price || ed.price === "N/A" ? (
-                      <span className="text-gray-400">N/A</span>
-                    ) : (
-                      <PriceCell price={ed.price} url={ed.url} isBest={false} />
-                    )}
-                  </div>
+                    <div
+                      key={ed.name}
+                      className="flex items-center gap-2 text-xs pl-7"
+                    >
+                      <span className="flex-1 text-gray-400 truncate italic">
+                        {shortName}
+                      </span>
+                      {!ed.price || ed.price === "N/A" ? (
+                        <span className="text-gray-400">N/A</span>
+                      ) : (
+                        <PriceCell
+                          price={ed.price}
+                          url={ed.url}
+                          isBest={false}
+                        />
+                      )}
+                    </div>
                   );
                 })}
               </div>

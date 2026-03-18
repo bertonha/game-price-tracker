@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Game, GamePrices, StorePrice, SteamSuggestion, STORES } from "@/lib/types";
+import {
+  Game,
+  GamePrices,
+  StorePrice,
+  SteamSuggestion,
+  STORES,
+} from "@/lib/types";
 import { loadGames, saveGames } from "@/lib/storage";
 import { gameKey } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
@@ -25,8 +31,14 @@ import { CSS } from "@dnd-kit/utilities";
 
 function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
   const key = gameKey(props.game);
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: key });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: key });
 
   return (
     <div
@@ -40,10 +52,12 @@ function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
 }
 
 export default function HomePage() {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
   const [games, setGames] = useState<Game[]>([]);
   const [activeStores, setActiveStores] = useState<Set<string>>(
-    new Set(STORES.map((s) => s.id))
+    new Set(STORES.map((s) => s.id)),
   );
   const [refreshingKeys, setRefreshingKeys] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState("");
@@ -66,7 +80,13 @@ export default function HomePage() {
     const update = (storeId: keyof GamePrices, price: StorePrice) =>
       setGames((prev) => {
         const next = prev.map((g) =>
-          gameKey(g) === key ? { ...g, prices: { ...g.prices, [storeId]: price }, lastFetched: Date.now() } : g
+          gameKey(g) === key
+            ? {
+                ...g,
+                prices: { ...g.prices, [storeId]: price },
+                lastFetched: Date.now(),
+              }
+            : g,
         );
         saveGames(next);
         return next;
@@ -76,18 +96,30 @@ export default function HomePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: game.name, appid: game.appid }),
-    }).then((r) => r.json()).then((d) => { if (d.price) update("steam", d.price); }).catch(() => {});
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.price) update("steam", d.price);
+      })
+      .catch(() => {});
 
     const nuuvem = fetch("/api/fetch-prices/nuuvem", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: game.name }),
-    }).then((r) => r.json()).then((d) => { if (d.price) update("nuuvem", d.price); }).catch(() => {});
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.price) update("nuuvem", d.price);
+      })
+      .catch(() => {});
 
     await Promise.all([steam, nuuvem]);
   }
 
-  async function addGame(input: SteamSuggestion | { name: string; appid: string; img: string }) {
+  async function addGame(
+    input: SteamSuggestion | { name: string; appid: string; img: string },
+  ) {
     const existing = games.find((g) => gameKey(g) === gameKey(input));
     if (existing) {
       setStatus(`"${input.name}" is already in your list.`);
@@ -106,7 +138,9 @@ export default function HomePage() {
       const res = await fetch(`/api/game-details?appid=${input.appid}`);
       const data = await res.json();
       if (data.name) resolved = { ...resolved, name: data.name, img: data.img };
-    } catch { /* fall back to suggestion data */ }
+    } catch {
+      /* fall back to suggestion data */
+    }
 
     const key = gameKey(resolved);
     const newGame: Game = {
@@ -127,7 +161,11 @@ export default function HomePage() {
       setStatus(`Could not fetch prices for "${input.name}".`);
       setTimeout(() => setStatus(""), 5000);
     } finally {
-      setRefreshingKeys((prev) => { const s = new Set(prev); s.delete(key); return s; });
+      setRefreshingKeys((prev) => {
+        const s = new Set(prev);
+        s.delete(key);
+        return s;
+      });
     }
   }
 
@@ -135,7 +173,9 @@ export default function HomePage() {
     const game = games.find((g) => gameKey(g) === key);
     if (!game) return;
     setRefreshingKeys((prev) => new Set(prev).add(key));
-    setGames((prev) => prev.map((g) => gameKey(g) === key ? { ...g, prices: {} } : g));
+    setGames((prev) =>
+      prev.map((g) => (gameKey(g) === key ? { ...g, prices: {} } : g)),
+    );
     setStatus(`Refreshing "${game.name}"…`);
     try {
       await fetchPrices(game);
@@ -144,7 +184,11 @@ export default function HomePage() {
       setStatus(`Failed to refresh "${game.name}".`);
       setTimeout(() => setStatus(""), 4000);
     } finally {
-      setRefreshingKeys((prev) => { const s = new Set(prev); s.delete(key); return s; });
+      setRefreshingKeys((prev) => {
+        const s = new Set(prev);
+        s.delete(key);
+        return s;
+      });
     }
   }
 
@@ -164,15 +208,22 @@ export default function HomePage() {
       games.map(async (game) => {
         const key = gameKey(game);
         await fetchPrices(game).catch(() => {});
-        setRefreshingKeys((prev) => { const s = new Set(prev); s.delete(key); return s; });
+        setRefreshingKeys((prev) => {
+          const s = new Set(prev);
+          s.delete(key);
+          return s;
+        });
         completed++;
         setProgress(Math.round((completed / total) * 100));
-      })
+      }),
     );
 
     setProgress(100);
     setStatus("All prices updated.");
-    setTimeout(() => { setProgress(null); setStatus(""); }, 2500);
+    setTimeout(() => {
+      setProgress(null);
+      setStatus("");
+    }, 2500);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -196,7 +247,8 @@ export default function HomePage() {
   function toggleStore(id: string) {
     setActiveStores((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -250,9 +302,7 @@ export default function HomePage() {
       </div>
 
       {/* Status + progress */}
-      {status && (
-        <p className="text-sm text-gray-500 mb-3">{status}</p>
-      )}
+      {status && <p className="text-sm text-gray-500 mb-3">{status}</p>}
       {progress !== null && (
         <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-4 overflow-hidden">
           <div
@@ -271,8 +321,15 @@ export default function HomePage() {
           </p>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={games.map(gameKey)} strategy={rectSortingStrategy}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={games.map(gameKey)}
+            strategy={rectSortingStrategy}
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {games.map((game) => {
                 const key = gameKey(game);

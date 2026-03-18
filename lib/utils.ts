@@ -1,8 +1,17 @@
-export const gameKey = (g: { appid?: string; name: string }): string => g.appid || g.name;
+export const gameKey = (g: { appid?: string; name: string }): string =>
+  g.appid || g.name;
 
-export function stripGamePrefix(editionTitle: string, baseName: string): string {
+export function stripGamePrefix(
+  editionTitle: string,
+  baseName: string,
+): string {
   const norm = (s: string) =>
-    s.replace(/[™®©]/g, "").replace(/[:\-–—]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+    s
+      .replace(/[™®©]/g, "")
+      .replace(/[:\-–—]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
   const normBase = norm(baseName);
   const normEdition = norm(editionTitle);
   if (!normEdition.startsWith(normBase)) return editionTitle;
@@ -21,10 +30,9 @@ export function timeAgo(ts: number): string {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
-export function parseGameInput(val: string):
-  | { type: "appid"; appid: string }
-  | { type: "name"; name: string }
-  | null {
+export function parseGameInput(
+  val: string,
+): { type: "appid"; appid: string } | { type: "name"; name: string } | null {
   val = val.trim();
   const appUrlMatch = val.match(/store\.steampowered\.com\/app\/(\d+)/);
   if (appUrlMatch) return { type: "appid", appid: appUrlMatch[1]! };
@@ -34,7 +42,7 @@ export function parseGameInput(val: string):
 }
 
 export function bestDeal(
-  prices: Partial<Record<string, { price?: string | null }>>
+  prices: Partial<Record<string, { price?: string | null }>>,
 ): string | null {
   let bestVal: number | null = null;
   let bestStore: string | null = null;

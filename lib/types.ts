@@ -31,8 +31,8 @@ export interface SteamSuggestion {
 }
 
 export const STORES = [
-  { id: "steam",  name: "Steam BR", color: "#1b2838", abbr: "ST" },
-  { id: "nuuvem", name: "Nuuvem",   color: "#e8392b", abbr: "NU" },
+  { id: "steam", name: "Steam BR", color: "#1b2838", abbr: "ST" },
+  { id: "nuuvem", name: "Nuuvem", color: "#e8392b", abbr: "NU" },
 ] as const;
 
-export type StoreId = typeof STORES[number]["id"];
+export type StoreId = (typeof STORES)[number]["id"];

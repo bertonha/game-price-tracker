@@ -25,7 +25,11 @@ const HEADERS: Record<string, string> = {
 };
 
 /** Parse a data-price JSON attribute: { iv, e, v } → "R$ X,XX" */
-function parsePriceCents(json: { iv: number; e: number | null; v: number }): string {
+function parsePriceCents(json: {
+  iv: number;
+  e: number | null;
+  v: number;
+}): string {
   const cents = json.v ?? json.iv * 100;
   return "R$ " + (cents / 100).toFixed(2).replace(".", ",");
 }
@@ -44,7 +48,11 @@ function extractPrice(html: string): string | null {
 
 // ── Slug-based fetch (info API) ──────────────────────────────────────────────
 
-async function fetchNuuvemBySlug(slug: string, name: string, removedSegment: string | null = null): Promise<StorePrice | null> {
+async function fetchNuuvemBySlug(
+  slug: string,
+  name: string,
+  removedSegment: string | null = null,
+): Promise<StorePrice | null> {
   const itemUrl = `https://www.nuuvem.com/br-pt/item/${slug}`;
   const infoUrl = `https://www.nuuvem.com/br-pt/item/info/${slug}`;
 
@@ -91,7 +99,11 @@ async function fetchNuuvemBySlug(slug: string, name: string, removedSegment: str
 async function slugExists(slug: string): Promise<boolean> {
   try {
     const res = await fetch(`https://www.nuuvem.com/br-pt/item/info/${slug}`, {
-      headers: { ...HEADERS, accept: "application/json, text/javascript, */*; q=0.01", "x-requested-with": "XMLHttpRequest" },
+      headers: {
+        ...HEADERS,
+        accept: "application/json, text/javascript, */*; q=0.01",
+        "x-requested-with": "XMLHttpRequest",
+      },
       signal: AbortSignal.timeout(8_000),
     });
     return res.ok;
@@ -100,7 +112,10 @@ async function slugExists(slug: string): Promise<boolean> {
   }
 }
 
-async function resolveEditionSlug(slug: string, removedSegment: string | null): Promise<string> {
+async function resolveEditionSlug(
+  slug: string,
+  removedSegment: string | null,
+): Promise<string> {
   if (await slugExists(slug)) return slug;
 
   if (removedSegment) {
@@ -109,7 +124,8 @@ async function resolveEditionSlug(slug: string, removedSegment: string | null): 
       if (await slugExists(withoutRemoved)) {
         return withoutRemoved;
       }
-      const withoutRemovedAndLastSegment = removeLastSlugSegment(withoutRemoved);
+      const withoutRemovedAndLastSegment =
+        removeLastSlugSegment(withoutRemoved);
       if (withoutRemovedAndLastSegment) {
         return withoutRemovedAndLastSegment;
       }
@@ -119,8 +135,14 @@ async function resolveEditionSlug(slug: string, removedSegment: string | null): 
   return removeLastSlugSegment(slug) ?? slug;
 }
 
-async function parseEditionCards(html: string, baseName: string, basePrice: string, removedSegment: string | null = null): Promise<Edition[] | undefined> {
-  const cardRegex = /<div[^>]*class="[^"]*game-card[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/g;
+async function parseEditionCards(
+  html: string,
+  baseName: string,
+  basePrice: string,
+  removedSegment: string | null = null,
+): Promise<Edition[] | undefined> {
+  const cardRegex =
+    /<div[^>]*class="[^"]*game-card[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/g;
 
   const candidates: { cardName: string; cardPrice: string }[] = [];
   let match;
@@ -134,7 +156,9 @@ async function parseEditionCards(html: string, baseName: string, basePrice: stri
     if (!priceMatch) continue;
     let cardPrice: string;
     try {
-      const decoded = priceMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+      const decoded = priceMatch[1]
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, "&");
       cardPrice = parsePriceCents(JSON.parse(decoded));
     } catch {
       continue;
@@ -148,9 +172,16 @@ async function parseEditionCards(html: string, baseName: string, basePrice: stri
 
   const editions = await Promise.all(
     candidates.map(async ({ cardName, cardPrice }) => {
-      const resolvedSlug = await resolveEditionSlug(toNuuvemSlug(cardName), removedSegment);
-      return { name: stripGamePrefix(cardName, baseName), price: cardPrice, url: `https://www.nuuvem.com/br-pt/item/${resolvedSlug}` };
-    })
+      const resolvedSlug = await resolveEditionSlug(
+        toNuuvemSlug(cardName),
+        removedSegment,
+      );
+      return {
+        name: stripGamePrefix(cardName, baseName),
+        price: cardPrice,
+        url: `https://www.nuuvem.com/br-pt/item/${resolvedSlug}`,
+      };
+    }),
   );
 
   return editions.length > 0 ? editions : undefined;
@@ -166,7 +197,11 @@ export async function fetchNuuvem(name: string): Promise<StorePrice> {
   const fallbackSlug = removeLastSlugSegment(slug);
   if (fallbackSlug) {
     const removedSegment = slug.slice(fallbackSlug.length);
-    const fallback = await fetchNuuvemBySlug(fallbackSlug, name, removedSegment);
+    const fallback = await fetchNuuvemBySlug(
+      fallbackSlug,
+      name,
+      removedSegment,
+    );
     if (fallback) return fallback;
   }
 

@@ -7,13 +7,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint && prettier --check --write ."
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "next": "16.1.7",
+    "prettier": "^3.8.1",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
