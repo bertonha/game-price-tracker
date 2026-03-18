@@ -3,83 +3,118 @@ import { stripGamePrefix } from "@/lib/utils";
 
 const NUUVEM_EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
 
-function toNuuvemSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[™®©]/g, "")
-    .replace(/[:\-–—]/g, " ")
-    .replace(/[^a-z0-9\s]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-}
-
-function removeLastSlugSegment(slug: string): string | null {
-  const lastHyphen = slug.lastIndexOf("-");
-  return lastHyphen > 0 ? slug.slice(0, lastHyphen) : null;
-}
-
 const HEADERS: Record<string, string> = {
   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7",
   "user-agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
 };
 
-/** Parse a data-price JSON attribute: { iv, e, v } → "R$ X,XX" */
-function parsePriceCents(json: {
-  iv: number;
-  e: number | null;
-  v: number;
-}): string {
-  const cents = json.v ?? json.iv * 100;
-  return "R$ " + (cents / 100).toFixed(2).replace(".", ",");
-}
+const XHR_HEADERS: Record<string, string> = {
+  ...HEADERS,
+  accept: "application/json, text/javascript, */*; q=0.01",
+  "x-requested-with": "XMLHttpRequest",
+};
 
-/** Extract first data-price value from an HTML snippet. */
-function extractPrice(html: string): string | null {
-  const m = html.match(/data-price="([^"]+)"/);
-  if (!m) return null;
+/** Decode an HTML-encoded data-price attribute and format as "R$ X,XX". */
+function decodePrice(encoded: string): string | null {
   try {
-    const decoded = m[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&");
-    return parsePriceCents(JSON.parse(decoded));
+    const json = JSON.parse(
+      encoded.replace(/&quot;/g, '"').replace(/&amp;/g, "&"),
+    );
+    const cents: number = json.v ?? json.iv * 100;
+    return "R$ " + (cents / 100).toFixed(2).replace(".", ",");
   } catch {
     return null;
   }
 }
 
-// ── Edition slug resolution ───────────────────────────────────────────────────
-
-async function slugExists(slug: string): Promise<boolean> {
-  try {
-    const res = await fetch(`https://www.nuuvem.com/br-pt/item/info/${slug}`, {
-      headers: {
-        ...HEADERS,
-        accept: "application/json, text/javascript, */*; q=0.01",
-        "x-requested-with": "XMLHttpRequest",
-      },
-      signal: AbortSignal.timeout(8_000),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+/** Extract first data-price value from an HTML snippet. */
+function extractPrice(html: string): string | null {
+  const m = html.match(/data-price="([^"]+)"/);
+  return m ? decodePrice(m[1]) : null;
 }
 
-async function resolveEditionSlug(slug: string): Promise<string> {
-  if (await slugExists(slug)) return slug;
-  return removeLastSlugSegment(slug) ?? slug;
+/** Extract the asset ID from a Nuuvem banner image src. */
+function extractImageId(html: string): string | null {
+  const m = html.match(/\/products\/([a-f0-9]+)\/banners\//);
+  return m ? m[1] : null;
+}
+
+/** Score how well a candidate title matches the query name.
+ *  Returns 0 if any query word is missing from the title (strict subset check),
+ *  otherwise returns Jaccard overlap as a tiebreaker. */
+function matchScore(query: string, title: string): number {
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[™®©]/g, "")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ")
+      .filter(Boolean);
+  const qWords = new Set(normalize(query));
+  const tWords = new Set(normalize(title));
+  for (const w of qWords) if (!tWords.has(w)) return 0;
+  return qWords.size / new Set([...qWords, ...tWords]).size;
+}
+
+// ── Autocomplete ──────────────────────────────────────────────────────────────
+
+type AutocompleteResult = {
+  bestUrl: string;
+  imageIdToUrl: Map<string, string>;
+};
+
+async function autocomplete(name: string): Promise<AutocompleteResult | null> {
+  const query = name.split(" ").slice(0, 4).join(" ");
+  const url = `https://www.nuuvem.com/br-pt/products_searches/autocomplete?query=${encodeURIComponent(query)}&platform=pc`;
+  try {
+    const res = await fetch(url, {
+      headers: { ...XHR_HEADERS, accept: "application/json" },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      products?: { url: string; html: string }[];
+    };
+    if (!data.products?.length) return null;
+
+    const imageIdToUrl = new Map<string, string>();
+    let bestUrl: string | null = null;
+    let bestScore = 0;
+
+    for (const p of data.products) {
+      const titleMatch = p.html.match(/<h1[^>]*title="([^"]+)"/);
+      if (!titleMatch || NUUVEM_EXCLUDE.test(p.html)) continue;
+
+      const imageId = extractImageId(p.html);
+      if (imageId) imageIdToUrl.set(imageId, p.url);
+      const score = matchScore(name, titleMatch[1]);
+      if (score > bestScore) {
+        bestScore = score;
+        bestUrl = p.url;
+      }
+    }
+
+    return bestScore > 0 && bestUrl ? { bestUrl, imageIdToUrl } : null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Edition parsing from full page HTML ──────────────────────────────────────
 
-async function parseEditionCards(
+function parseEditionCards(
   html: string,
   baseName: string,
   basePrice: string,
-): Promise<Edition[] | undefined> {
+  imageIdToUrl: Map<string, string>,
+): Edition[] | undefined {
   const cardRegex =
     /<div[^>]*class="[^"]*game-card[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/g;
 
-  const candidates: { cardName: string; cardPrice: string }[] = [];
+  const editions: Edition[] = [];
   let match;
   while ((match = cardRegex.exec(html)) !== null) {
     const card = match[0];
@@ -89,55 +124,44 @@ async function parseEditionCards(
 
     const priceMatch = card.match(/data-price="([^"]+)"/);
     if (!priceMatch) continue;
-    let cardPrice: string;
-    try {
-      const decoded = priceMatch[1]
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, "&");
-      cardPrice = parsePriceCents(JSON.parse(decoded));
-    } catch {
-      continue;
-    }
-    if (cardPrice === basePrice) continue;
+    const cardPrice = decodePrice(priceMatch[1]);
+    if (!cardPrice || cardPrice === basePrice) continue;
 
-    candidates.push({ cardName, cardPrice });
+    const imageId = extractImageId(card);
+    const cardUrl = imageId ? imageIdToUrl.get(imageId) : undefined;
+    if (!cardUrl) continue;
+
+    editions.push({
+      name: stripGamePrefix(cardName, baseName),
+      price: cardPrice,
+      url: cardUrl,
+    });
   }
-
-  if (candidates.length === 0) return undefined;
-
-  const editions = await Promise.all(
-    candidates.map(async ({ cardName, cardPrice }) => {
-      const resolvedSlug = await resolveEditionSlug(toNuuvemSlug(cardName));
-      return {
-        name: stripGamePrefix(cardName, baseName),
-        price: cardPrice,
-        url: `https://www.nuuvem.com/br-pt/item/${resolvedSlug}`,
-      };
-    }),
-  );
 
   return editions.length > 0 ? editions : undefined;
 }
 
-// ── URL-based fetch ───────────────────────────────────────────────────────────
+// ── Fetch by URL ─────────────────────────────────────────────────────────────
 
 async function fetchNuuvemByUrl(
   itemUrl: string,
   name: string,
+  imageIdToUrl: Map<string, string>,
 ): Promise<StorePrice | null> {
   const slug = itemUrl.split("/item/")[1];
-  const infoUrl = `https://www.nuuvem.com/br-pt/item/info/${slug}`;
 
   try {
-    const infoRes = await fetch(infoUrl, {
-      headers: {
-        ...HEADERS,
-        accept: "application/json, text/javascript, */*; q=0.01",
-        "x-requested-with": "XMLHttpRequest",
-        referer: itemUrl,
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
+    // Fire both requests in parallel — editions are nice-to-have
+    const [infoRes, pageRes] = await Promise.all([
+      fetch(`https://www.nuuvem.com/br-pt/item/info/${slug}`, {
+        headers: { ...XHR_HEADERS, referer: itemUrl },
+        signal: AbortSignal.timeout(15_000),
+      }),
+      fetch(itemUrl, {
+        headers: { ...HEADERS, accept: "text/html" },
+        signal: AbortSignal.timeout(15_000),
+      }).catch(() => null),
+    ]);
     if (!infoRes.ok) return null;
 
     const { info } = (await infoRes.json()) as { info: string };
@@ -145,16 +169,13 @@ async function fetchNuuvemByUrl(
     if (!price) return null;
 
     let editions: Edition[] | undefined;
-    try {
-      const pageRes = await fetch(itemUrl, {
-        headers: { ...HEADERS, accept: "text/html" },
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (pageRes.ok) {
-        editions = await parseEditionCards(await pageRes.text(), name, price);
-      }
-    } catch {
-      // Editions are nice-to-have; don't fail the whole lookup
+    if (pageRes?.ok) {
+      editions = parseEditionCards(
+        await pageRes.text(),
+        name,
+        price,
+        imageIdToUrl,
+      );
     }
 
     return { price, url: itemUrl, editions };
@@ -163,75 +184,13 @@ async function fetchNuuvemByUrl(
   }
 }
 
-// ── Autocomplete ──────────────────────────────────────────────────────────────
-
-function extractTitleFromHtml(html: string): string {
-  const m = html.match(/<h1[^>]*title="([^"]+)"/);
-  return m ? m[1].trim() : "";
-}
-
-function normalizeForMatch(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/[™®©]/g, "")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function matchScore(a: string, b: string): number {
-  const wa = new Set(normalizeForMatch(a).split(" ").filter(Boolean));
-  const wb = new Set(normalizeForMatch(b).split(" ").filter(Boolean));
-  let overlap = 0;
-  for (const w of wa) if (wb.has(w)) overlap++;
-  const union = new Set([...wa, ...wb]).size;
-  return union === 0 ? 0 : overlap / union;
-}
-
-async function autocompleteUrl(name: string): Promise<string | null> {
-  const query = name.split(" ").slice(0, 4).join(" ");
-  const url = `https://www.nuuvem.com/br-pt/products_searches/autocomplete?query=${encodeURIComponent(query)}&platform=pc`;
-  try {
-    const res = await fetch(url, {
-      headers: {
-        ...HEADERS,
-        accept: "application/json",
-        "x-requested-with": "XMLHttpRequest",
-      },
-      signal: AbortSignal.timeout(8_000),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      products?: { url: string; html: string }[];
-    };
-    if (!data.products?.length) return null;
-
-    let bestUrl: string | null = null;
-    let bestScore = 0;
-    for (const p of data.products) {
-      const title = extractTitleFromHtml(p.html);
-      if (!title) continue;
-      const score = matchScore(name, title);
-      if (score > bestScore) {
-        bestScore = score;
-        bestUrl = p.url;
-      }
-    }
-
-    return bestScore > 0 ? bestUrl : null;
-  } catch {
-    return null;
-  }
-}
-
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export async function fetchNuuvem(name: string): Promise<StorePrice> {
-  const itemUrl = await autocompleteUrl(name);
-  if (itemUrl) {
-    const result = await fetchNuuvemByUrl(itemUrl, name);
+  const ac = await autocomplete(name);
+  if (ac) {
+    const result = await fetchNuuvemByUrl(ac.bestUrl, name, ac.imageIdToUrl);
     if (result) return result;
   }
-
   return { price: "N/A", url: null };
 }
