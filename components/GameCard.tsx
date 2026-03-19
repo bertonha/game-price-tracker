@@ -17,10 +17,14 @@ function PriceCell({
   price,
   url,
   isBest,
+  storeName,
+  gameName,
 }: {
   price: string;
   url: string | null;
   isBest: boolean;
+  storeName?: string;
+  gameName?: string;
 }) {
   return (
     <span className="flex items-center gap-1 flex-wrap justify-end">
@@ -35,6 +39,7 @@ function PriceCell({
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-500 hover:underline text-[10px]"
+          aria-label={`View ${gameName ?? "game"} on ${storeName ?? "store"}`}
         >
           view ↗
         </a>
@@ -57,11 +62,14 @@ export default function GameCard({
   const visibleStores = STORES.filter((s) => activeStores.has(s.id));
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col">
+    <article
+      aria-label={game.name}
+      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col"
+    >
       {/* Header image — also the drag handle */}
       <div
         {...dragHandleProps}
-        className={`relative h-20 bg-gray-100 dark:bg-gray-800 flex-shrink-0 ${dragHandleProps ? "cursor-grab active:cursor-grabbing" : ""}`}
+        className={`relative h-36 bg-gray-100 dark:bg-gray-800 flex-shrink-0 ${dragHandleProps ? "cursor-grab active:cursor-grabbing" : ""}`}
       >
         {game.img ? (
           <Image
@@ -89,21 +97,23 @@ export default function GameCard({
             <button
               onClick={() => onRefresh(key)}
               disabled={refreshing}
+              aria-label={`Refresh prices for ${game.name}`}
               title="Refresh prices"
               className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-xs"
             >
               {refreshing ? (
-                <span className="inline-block animate-spin">↻</span>
+                <span className="inline-block animate-spin" aria-hidden="true">↻</span>
               ) : (
-                "↻"
+                <span aria-hidden="true">↻</span>
               )}
             </button>
             <button
               onClick={() => onRemove(key)}
+              aria-label={`Remove ${game.name}`}
               title="Remove game"
               className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-xs"
             >
-              ✕
+              <span aria-hidden="true">✕</span>
             </button>
           </div>
         </div>
@@ -122,6 +132,7 @@ export default function GameCard({
                   <span
                     className="w-5 h-5 rounded flex items-center justify-center text-white font-semibold flex-shrink-0"
                     style={{ background: store.color, fontSize: 9 }}
+                    aria-hidden="true"
                   >
                     {store.abbr}
                   </span>
@@ -137,6 +148,8 @@ export default function GameCard({
                       price={info.price}
                       url={info.url}
                       isBest={!!isBest}
+                      storeName={store.name}
+                      gameName={game.name}
                     />
                   )}
                 </div>
@@ -164,6 +177,8 @@ export default function GameCard({
                           price={ed.price}
                           url={ed.url}
                           isBest={false}
+                          storeName={store.name}
+                          gameName={`${game.name} ${shortName}`}
                         />
                       )}
                     </div>
@@ -187,10 +202,13 @@ export default function GameCard({
         {/* Last updated */}
         {game.lastFetched && (
           <p className="text-[10px] text-gray-400 mt-auto">
-            Updated {timeAgo(game.lastFetched)}
+            Updated{" "}
+            <time dateTime={new Date(game.lastFetched).toISOString()}>
+              {timeAgo(game.lastFetched)}
+            </time>
           </p>
         )}
       </div>
-    </div>
+    </article>
   );
 }
