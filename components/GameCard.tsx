@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Game, STORES, StoreId } from "@/lib/types";
 import { timeAgo, bestDeal, gameKey } from "@/lib/utils";
 
@@ -94,6 +95,17 @@ export default function GameCard({
             {game.name}
           </h3>
           <div className="flex gap-1 flex-shrink-0">
+            {game.appid && (
+              <Link
+                href={`/share/${game.appid}`}
+                target="_blank"
+                aria-label={`Share ${game.name}`}
+                title="Share"
+                className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors text-xs"
+              >
+                <span aria-hidden="true">↗</span>
+              </Link>
+            )}
             <button
               onClick={() => onRefresh(key)}
               disabled={refreshing}
