@@ -4,43 +4,10 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Game, STORES, StoreId } from "@/lib/types";
+import { Game } from "@/lib/types";
 import { bestDeal } from "@/lib/utils";
-
-function PriceCell({
-  price,
-  url,
-  isBest,
-  storeName,
-  gameName,
-}: {
-  price: string;
-  url: string | null;
-  isBest: boolean;
-  storeName?: string;
-  gameName?: string;
-}) {
-  return (
-    <span className="flex items-center gap-1 flex-wrap justify-end">
-      <span
-        className={`font-medium ${isBest ? "text-emerald-600 dark:text-emerald-400" : ""}`}
-      >
-        {price}
-      </span>
-      {url && (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 hover:underline text-xs"
-          aria-label={`View ${gameName ?? "game"} on ${storeName ?? "store"}`}
-        >
-          view ↗
-        </a>
-      )}
-    </span>
-  );
-}
+import StorePriceList from "@/components/StorePriceList";
+import BestDealBanner from "@/components/BestDealBanner";
 
 export default function SharePage() {
   const { appid } = useParams<{ appid: string }>();
@@ -157,86 +124,13 @@ export default function SharePage() {
         <div className="bg-white dark:bg-gray-900 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-xl p-5 flex flex-col gap-4">
           <h1 className="text-xl font-semibold leading-tight">{game.name}</h1>
 
-          {/* Store rows */}
-          <div className="flex flex-col gap-3">
-            {STORES.map((store) => {
-              const info = game.prices[store.id as StoreId];
-              const isBest =
-                best === store.id && info?.price && info.price !== "N/A";
+          <StorePriceList
+            prices={game.prices}
+            gameName={game.name}
+            bestStore={best}
+          />
 
-              return (
-                <div key={store.id} className="flex flex-col gap-1.5">
-                  {/* Base game row */}
-                  <div className="flex items-center gap-3 text-sm">
-                    <span
-                      className="w-6 h-6 rounded flex items-center justify-center text-white font-semibold flex-shrink-0"
-                      style={{ background: store.color, fontSize: 10 }}
-                      aria-hidden="true"
-                    >
-                      {store.abbr}
-                    </span>
-                    <span className="flex-1 text-gray-500">{store.name}</span>
-                    {!info ? (
-                      <span className="text-gray-400 italic animate-pulse">
-                        checking…
-                      </span>
-                    ) : !info.price || info.price === "N/A" ? (
-                      <span className="text-gray-400">N/A</span>
-                    ) : (
-                      <PriceCell
-                        price={info.price}
-                        url={info.url}
-                        isBest={!!isBest}
-                        storeName={store.name}
-                        gameName={game.name}
-                      />
-                    )}
-                  </div>
-                  {/* Edition sub-rows */}
-                  {info?.editions?.map((ed) => {
-                    const shortName =
-                      ed.name
-                        .replace(
-                          new RegExp(`^${game.name}\\s*[-–]?\\s*`, "i"),
-                          "",
-                        )
-                        .trim() || ed.name;
-                    return (
-                      <div
-                        key={ed.name}
-                        className="flex items-center gap-3 text-sm pl-9"
-                      >
-                        <span className="flex-1 text-gray-400 truncate italic">
-                          {shortName}
-                        </span>
-                        {!ed.price || ed.price === "N/A" ? (
-                          <span className="text-gray-400">N/A</span>
-                        ) : (
-                          <PriceCell
-                            price={ed.price}
-                            url={ed.url}
-                            isBest={false}
-                            storeName={store.name}
-                            gameName={`${game.name} ${shortName}`}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Best deal banner */}
-          {best && (
-            <div className="text-sm bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 text-gray-500">
-              Best deal:{" "}
-              <strong className="text-emerald-600 dark:text-emerald-400">
-                {STORES.find((s) => s.id === best)?.name}
-              </strong>
-            </div>
-          )}
+          {best && <BestDealBanner bestStore={best} />}
 
           {/* Back link */}
           <Link href="/" className="text-blue-500 hover:underline text-sm mt-2">
