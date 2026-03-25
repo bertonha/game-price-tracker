@@ -1,104 +1,41 @@
-"use client";
-
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Game } from "@/lib/types";
-import { bestDeal } from "@/lib/utils";
-import StorePriceList from "@/components/StorePriceList";
-import BestDealBanner from "@/components/BestDealBanner";
+import { notFound } from "next/navigation";
+import ShareGamePrices from "@/components/ShareGamePrices";
 
-export default function SharePage() {
-  const { appid } = useParams<{ appid: string }>();
-  const [game, setGame] = useState<Game | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+const STEAM_COUNTRY = process.env.STEAM_COUNTRY ?? "BR";
+const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "portuguese";
 
-  useEffect(() => {
-    if (!appid) return;
+async function getGameDetails(appid: string) {
+  const url =
+    `https://store.steampowered.com/api/appdetails` +
+    `?appids=${appid}&cc=${STEAM_COUNTRY}&l=${STEAM_LANGUAGE}`;
 
-    async function load() {
-      try {
-        // Fetch game details
-        const detailsRes = await fetch(`/api/game-details?appid=${appid}`);
-        if (!detailsRes.ok) {
-          setError("Game not found");
-          setLoading(false);
-          return;
-        }
-        const details = await detailsRes.json();
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) return null;
 
-        const g: Game = {
-          appid: details.appid,
-          name: details.name,
-          img: details.img,
-          prices: {},
-          addedAt: Date.now(),
-        };
-        setGame(g);
-        setLoading(false);
+  const data = await res.json();
+  const appData = data[appid]?.data;
+  if (!appData) return null;
 
-        // Fetch prices in parallel
-        const [steamRes, nuuvemRes] = await Promise.allSettled([
-          fetch("/api/fetch-prices/steam", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: details.name, appid: details.appid }),
-          }).then((r) => r.json()),
-          fetch("/api/fetch-prices/nuuvem", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: details.name }),
-          }).then((r) => r.json()),
-        ]);
+  return {
+    appid,
+    name: appData.name as string,
+    img: appData.header_image as string,
+  };
+}
 
-        setGame((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            prices: {
-              steam:
-                steamRes.status === "fulfilled" && steamRes.value.price
-                  ? steamRes.value.price
-                  : undefined,
-              nuuvem:
-                nuuvemRes.status === "fulfilled" && nuuvemRes.value.price
-                  ? nuuvemRes.value.price
-                  : undefined,
-            },
-            lastFetched: Date.now(),
-          };
-        });
-      } catch {
-        setError("Failed to load game information");
-        setLoading(false);
-      }
-    }
+export default async function SharePage({
+  params,
+}: {
+  params: Promise<{ appid: string }>;
+}) {
+  const { appid } = await params;
 
-    load();
-  }, [appid]);
+  if (!/^\d+$/.test(appid)) notFound();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 animate-pulse">Loading game info…</p>
-      </div>
-    );
-  }
-
-  if (error || !game) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-red-500">{error ?? "Something went wrong"}</p>
-        <Link href="/" className="text-blue-500 hover:underline text-sm">
-          ← Back to tracker
-        </Link>
-      </div>
-    );
-  }
-
-  const best = bestDeal(game.prices);
+  const game = await getGameDetails(appid);
+  if (!game) notFound();
 
   return (
     <main className="min-h-screen flex flex-col items-center px-4 py-8">
@@ -124,13 +61,7 @@ export default function SharePage() {
         <div className="bg-white dark:bg-gray-900 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-xl p-5 flex flex-col gap-4">
           <h1 className="text-xl font-semibold leading-tight">{game.name}</h1>
 
-          <StorePriceList
-            prices={game.prices}
-            gameName={game.name}
-            bestStore={best}
-          />
-
-          {best && <BestDealBanner bestStore={best} />}
+          <ShareGamePrices appid={game.appid} name={game.name} />
 
           {/* Back link */}
           <Link href="/" className="text-blue-500 hover:underline text-sm mt-2">
