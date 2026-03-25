@@ -114,7 +114,9 @@ export default function GameCard({
               className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-xs"
             >
               {refreshing ? (
-                <span className="inline-block animate-spin" aria-hidden="true">↻</span>
+                <span className="inline-block animate-spin" aria-hidden="true">
+                  ↻
+                </span>
               ) : (
                 <span aria-hidden="true">↻</span>
               )}

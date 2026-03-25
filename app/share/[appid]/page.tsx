@@ -239,10 +239,7 @@ export default function SharePage() {
           )}
 
           {/* Back link */}
-          <Link
-            href="/"
-            className="text-blue-500 hover:underline text-sm mt-2"
-          >
+          <Link href="/" className="text-blue-500 hover:underline text-sm mt-2">
             ← Track prices for more games
           </Link>
         </div>
