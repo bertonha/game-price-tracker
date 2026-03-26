@@ -71,8 +71,9 @@ export async function fetchSteam(
         name: stripGamePrefix(
           decodeHtml(
             s.option_text
-              .replace(/\s*-\s*R\$[\s\d,.]+$/, "")
               .replace(/<[^>]+>/g, "")
+              .replace(/R\$[\s\d,.]+/g, "")
+              .replace(/\s*-\s*$/, "")
               .trim(),
           ),
           name,
