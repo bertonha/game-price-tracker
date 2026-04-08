@@ -1,6 +1,6 @@
 "use client";
 
-import { SubmitEvent, useEffect, useState } from "react";
+import { Suspense, SubmitEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthGoogleButton from "@/components/AuthGoogleButton";
@@ -11,7 +11,7 @@ import {
   useSupabaseBrowserClient,
 } from "@/lib/supabase/browser-auth";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useSupabaseBrowserClient();
@@ -164,5 +164,13 @@ export default function LoginPage() {
 
       <AuthGoogleButton onClick={handleGoogleSignIn} disabled={loading} />
     </AuthPageFrame>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   );
 }
