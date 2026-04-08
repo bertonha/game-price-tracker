@@ -46,7 +46,6 @@ export default function GameCard({
             src={game.img}
             alt={game.name}
             fill
-            priority={prioritizeImage}
             loading={prioritizeImage ? "eager" : "lazy"}
             className="object-cover"
             unoptimized
