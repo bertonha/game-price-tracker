@@ -442,6 +442,7 @@ export default function HomePage() {
                     onRemove={removeGame}
                     onRefresh={refreshOne}
                     refreshing={refreshingKeys.has(key)}
+                    prioritizeImage={idx === 0}
                   />
                 );
               })}

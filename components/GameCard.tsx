@@ -13,6 +13,7 @@ interface Props {
   onRemove: (key: string) => void;
   onRefresh: (key: string) => void;
   refreshing?: boolean;
+  prioritizeImage?: boolean;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
@@ -22,6 +23,7 @@ export default function GameCard({
   onRemove,
   onRefresh,
   refreshing,
+  prioritizeImage = false,
   dragHandleProps,
 }: Props) {
   const key = gameKey(game);
@@ -44,6 +46,8 @@ export default function GameCard({
             src={game.img}
             alt={game.name}
             fill
+            priority={prioritizeImage}
+            loading={prioritizeImage ? "eager" : "lazy"}
             className="object-cover"
             unoptimized
           />

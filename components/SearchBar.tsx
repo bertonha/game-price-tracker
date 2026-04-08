@@ -142,9 +142,9 @@ export default function SearchBar({ onAdd, disabled }: Props) {
                     <Image
                       src={g.img}
                       alt=""
-                      width={40}
-                      height={25}
-                      style={{ height: "auto" }}
+                      width={120}
+                      height={45}
+                      style={{ width: "56px", height: "auto" }}
                       className="rounded flex-shrink-0"
                       unoptimized
                     />
