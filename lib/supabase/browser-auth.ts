@@ -32,3 +32,10 @@ export async function signInWithGoogle(
     },
   });
 }
+
+export async function updatePassword(
+  supabase: SupabaseClient,
+  newPassword: string,
+) {
+  return supabase.auth.updateUser({ password: newPassword });
+}
