@@ -1,25 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  MISSING_SUPABASE_ENV_ERROR,
+  useSupabaseBrowserClient,
+} from "@/lib/supabase/browser-auth";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const supabase = useSupabaseBrowserClient();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const displayedError = error || (!supabase ? MISSING_SUPABASE_ENV_ERROR : "");
 
   useEffect(() => {
     let active = true;
 
     async function loadProfile() {
       if (!supabase) {
-        if (active) setError("Supabase env vars are missing.");
         return;
       }
 
@@ -104,8 +107,14 @@ export default function ProfilePage() {
           This permanently deletes your account and signs you out immediately.
         </p>
 
-        {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
-        {notice && <p className="text-sm text-green-600 dark:text-green-400 mt-3">{notice}</p>}
+        {displayedError && (
+          <p className="text-sm text-red-500 mt-3">{displayedError}</p>
+        )}
+        {notice && (
+          <p className="text-sm text-green-600 dark:text-green-400 mt-3">
+            {notice}
+          </p>
+        )}
 
         <button
           type="button"

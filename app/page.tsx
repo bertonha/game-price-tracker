@@ -372,7 +372,9 @@ export default function HomePage() {
             </button>
           </div>
         </div>
-        <p className="text-sm text-gray-500">Compare prices across Steam BR &amp; Nuuvem</p>
+        <p className="text-sm text-gray-500">
+          Compare prices across Steam BR &amp; Nuuvem
+        </p>
       </div>
 
       {/* Search */}

@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   const { supabaseUrl, supabaseAnonKey } = getSupabaseEnv();
 
   if (!code) {
-    return NextResponse.redirect(new URL("/auth/login?error=missing_code", request.url));
+    return NextResponse.redirect(
+      new URL("/auth/login?error=missing_code", request.url),
+    );
   }
 
   const response = NextResponse.redirect(new URL(next, request.url));
@@ -30,7 +32,9 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    return NextResponse.redirect(new URL("/auth/login?error=oauth_callback", request.url));
+    return NextResponse.redirect(
+      new URL("/auth/login?error=oauth_callback", request.url),
+    );
   }
 
   return response;

@@ -33,7 +33,9 @@ export async function loadUserGames(
 ): Promise<Game[]> {
   const { data, error } = await supabase
     .from("user_games")
-    .select("appid, added_at, sort_order, games(name, img, prices, last_fetched)")
+    .select(
+      "appid, added_at, sort_order, games(name, img, prices, last_fetched)",
+    )
     .eq("user_id", userId)
     .order("sort_order", { ascending: true });
 
@@ -65,17 +67,15 @@ export async function upsertUserGame(
   );
 
   // 2. Upsert user → game link
-  await supabase
-    .from("user_games")
-    .upsert(
-      {
-        user_id: userId,
-        appid: game.appid,
-        added_at: game.addedAt,
-        sort_order: sortOrder,
-      },
-      { onConflict: "user_id,appid" },
-    );
+  await supabase.from("user_games").upsert(
+    {
+      user_id: userId,
+      appid: game.appid,
+      added_at: game.addedAt,
+      sort_order: sortOrder,
+    },
+    { onConflict: "user_id,appid" },
+  );
 }
 
 // Batch upsert — used for initial auto-import and full-list reorder.
@@ -128,4 +128,3 @@ export async function deleteAllUserGames(
 ): Promise<void> {
   await supabase.from("user_games").delete().eq("user_id", userId);
 }
-
