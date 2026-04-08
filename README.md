@@ -7,7 +7,8 @@ Compare game prices across **Steam BR** and **Nuuvem** — focused on the Brazil
 - Search games by name (with Steam autocomplete), Steam URL, or AppID
 - Real-time price lookup from Steam (official API) and Nuuvem (HTTP fetch)
 - Per-game refresh and bulk "refresh all" controls
-- Prices and game list persisted in `localStorage`
+- Email/password and Google login with Supabase Auth
+- Prices and game list persisted locally (database persistence is the next step)
 - Dark mode support
 
 ## Getting Started
@@ -41,17 +42,26 @@ npm start
 
 ## Environment Variables
 
-All variables are optional. Copy `.env.local.example` if it exists, or create `.env.local`:
+Copy `.env.local.example` to `.env.local` and fill values:
 
 ```env
-STEAM_COUNTRY=BR
-STEAM_LANGUAGE=portuguese
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
 ```
 
-| Variable         | Default      | Description                    |
-| ---------------- | ------------ | ------------------------------ |
-| `STEAM_COUNTRY`  | `BR`         | Country code for Steam pricing |
-| `STEAM_LANGUAGE` | `portuguese` | Language for Steam responses   |
+| Variable                                       | Default      | Description                              |
+| ---------------------------------------------- | ------------ | ---------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`                     | —            | Supabase project URL (required for auth) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` | —            | Supabase anon key (required for auth)    |
+| `STEAM_COUNTRY`                                | `BR`         | Country code for Steam pricing           |
+| `STEAM_LANGUAGE`                               | `portuguese` | Language for Steam responses             |
+
+## Authentication
+
+- The main app route (`/`) is protected by a Next.js proxy auth guard.
+- Public routes: `/auth/login`, `/auth/signup`, `/auth/callback`, and `/share/[appid]`.
+- Sign in options currently implemented: email/password and Google OAuth.
+- To enable Google OAuth, configure the Google provider in Supabase and set callback URL to `http://localhost:3000/auth/callback` for local development.
 
 ## Deployment
 

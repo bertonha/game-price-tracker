@@ -20,3 +20,12 @@ export function saveGames(games: Game[]): void {
     console.warn("Could not save games to localStorage");
   }
 }
+
+export function clearGames(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    console.warn("Could not clear games from localStorage");
+  }
+}

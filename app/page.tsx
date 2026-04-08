@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Game,
   GamePrices,
@@ -28,6 +29,7 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
   const key = gameKey(props.game);
@@ -52,6 +54,8 @@ function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
@@ -253,16 +257,34 @@ export default function HomePage() {
     });
   }
 
+  async function signOut() {
+    if (!supabase) {
+      return;
+    }
+
+    await supabase.auth.signOut();
+    router.replace("/auth/login");
+    router.refresh();
+  }
+
   if (!hydrated) return null;
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-medium mb-1">Game Price Tracker</h1>
-        <p className="text-sm text-gray-500">
-          Compare prices across Steam BR &amp; Nuuvem
-        </p>
+        <div className="flex items-center justify-between gap-4 mb-1">
+          <h1 className="text-2xl font-medium">Game Price Tracker</h1>
+          <button
+            type="button"
+            onClick={signOut}
+            disabled={!supabase}
+            className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+          >
+            Sign out
+          </button>
+        </div>
+        <p className="text-sm text-gray-500">Compare prices across Steam BR &amp; Nuuvem</p>
       </div>
 
       {/* Search */}
