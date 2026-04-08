@@ -4,6 +4,22 @@ import { SubmitEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
+function GoogleIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M21.35 11.1H12v2.98h5.37c-.23 1.52-1.72 4.47-5.37 4.47a5.98 5.98 0 0 1 0-11.96c2.08 0 3.47.88 4.26 1.64l2.9-2.8C17.32 3.72 14.93 2.75 12 2.75a9.25 9.25 0 1 0 0 18.5c5.33 0 8.87-3.75 8.87-9.03 0-.6-.06-1.03-.15-1.42Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 export default function SignupPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [email, setEmail] = useState("");
@@ -40,6 +56,30 @@ export default function SignupPage() {
     }
 
     setNotice("Account created. Check your email to confirm, then sign in.");
+  }
+
+  async function handleGoogleSignUp() {
+    setError("");
+    setNotice("");
+
+    if (!supabase) {
+      setError("Supabase env vars are missing.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (oauthError) {
+      setError(oauthError.message);
+      setLoading(false);
+    }
   }
 
   return (
@@ -85,6 +125,22 @@ export default function SignupPage() {
             {loading ? "Creating account..." : "Create account"}
           </button>
         </form>
+
+        <div className="my-4 flex items-center gap-3 text-xs text-gray-400">
+          <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+          <span>OR</span>
+          <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleSignUp}
+          disabled={loading}
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+        >
+          <GoogleIcon />
+          Continue with Google
+        </button>
 
         <p className="text-sm text-gray-500 mt-6">
           Already have one?{" "}

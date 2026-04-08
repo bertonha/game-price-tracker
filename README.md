@@ -8,6 +8,7 @@ Compare game prices across **Steam BR** and **Nuuvem** — focused on the Brazil
 - Real-time price lookup from Steam (official API) and Nuuvem (HTTP fetch)
 - Per-game refresh and bulk "refresh all" controls
 - Email/password and Google login with Supabase Auth
+- Profile page with direct account deletion
 - Prices and game list persisted locally (database persistence is the next step)
 - Dark mode support
 
@@ -59,8 +60,10 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
 ## Authentication
 
 - The main app route (`/`) is protected by a Next.js proxy auth guard.
+- The profile route (`/profile`) is also protected.
 - Public routes: `/auth/login`, `/auth/signup`, `/auth/callback`, and `/share/[appid]`.
 - Sign in options currently implemented: email/password and Google OAuth.
+- Account deletion can be done from `/profile` (requires `SUPABASE_SERVICE_ROLE_KEY` on the server).
 - To enable Google OAuth, configure the Google provider in Supabase and set callback URL to `http://localhost:3000/auth/callback` for local development.
 
 ## Deployment

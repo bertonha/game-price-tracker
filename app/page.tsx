@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Game,
@@ -354,14 +355,22 @@ export default function HomePage() {
       <div className="mb-6">
         <div className="flex items-center justify-between gap-4 mb-1">
           <h1 className="text-2xl font-medium">Game Price Tracker</h1>
-          <button
-            type="button"
-            onClick={signOut}
-            disabled={!supabase}
-            className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/profile"
+              className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              Profile
+            </Link>
+            <button
+              type="button"
+              onClick={signOut}
+              disabled={!supabase}
+              className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
         <p className="text-sm text-gray-500">Compare prices across Steam BR &amp; Nuuvem</p>
       </div>
