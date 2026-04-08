@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Game,
@@ -9,7 +9,14 @@ import {
   SteamSuggestion,
   STORES,
 } from "@/lib/types";
-import { loadGames, saveGames } from "@/lib/storage";
+import { loadGames, saveGames, clearGames } from "@/lib/storage";
+import {
+  loadUserGames,
+  upsertAllUserGames,
+  upsertUserGame,
+  deleteUserGame,
+  deleteAllUserGames,
+} from "@/lib/supabase/storage";
 import { gameKey } from "@/lib/utils";
 import SearchBar from "@/components/SearchBar";
 import StoreFilter from "@/components/StoreFilter";
@@ -56,6 +63,9 @@ function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
 export default function HomePage() {
   const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  // Keep userId in a ref so callbacks always have the latest value without
+  // needing it as a dependency.
+  const userIdRef = useRef<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
@@ -68,16 +78,69 @@ export default function HomePage() {
   const [progress, setProgress] = useState<number | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  // Load from localStorage on mount
+  // On mount: resolve user, load games from Supabase.
+  // If DB is empty and localStorage has games → auto-import once.
   useEffect(() => {
-    setGames(loadGames());
-    setHydrated(true);
-  }, []);
+    let active = true;
 
-  const persistGames = useCallback((updated: Game[]) => {
-    setGames(updated);
-    saveGames(updated);
-  }, []);
+    async function init() {
+      if (!supabase) {
+        setGames(loadGames());
+        setHydrated(true);
+        return;
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!active) return;
+
+      if (!user) {
+        // Middleware should redirect, but guard anyway.
+        setHydrated(true);
+        return;
+      }
+
+      userIdRef.current = user.id;
+
+      const remote = await loadUserGames(supabase, user.id);
+
+      if (!active) return;
+
+      if (remote.length > 0) {
+        setGames(remote);
+        saveGames(remote); // keep localStorage as a warm cache
+      } else {
+        // First login: auto-import games from localStorage.
+        const local = loadGames();
+        if (local.length > 0) {
+          await upsertAllUserGames(supabase, user.id, local);
+          if (active) setGames(local);
+          clearGames(); // localStorage no longer needed as source
+        }
+      }
+
+      setHydrated(true);
+    }
+
+    init();
+
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  const persistGames = useCallback(
+    (updated: Game[]) => {
+      setGames(updated);
+      saveGames(updated);
+      if (supabase && userIdRef.current) {
+        upsertAllUserGames(supabase, userIdRef.current, updated);
+      }
+    },
+    [supabase],
+  );
 
   async function fetchPrices(game: Game): Promise<void> {
     const key = gameKey(game);
@@ -93,6 +156,13 @@ export default function HomePage() {
             : g,
         );
         saveGames(next);
+        if (supabase && userIdRef.current) {
+          const updated = next.find((g) => gameKey(g) === key);
+          const sortOrder = next.findIndex((g) => gameKey(g) === key);
+          if (updated) {
+            upsertUserGame(supabase, userIdRef.current, updated, sortOrder);
+          }
+        }
         return next;
       });
 
@@ -239,12 +309,19 @@ export default function HomePage() {
   }
 
   function removeGame(key: string) {
+    const game = games.find((g) => gameKey(g) === key);
+    if (game && supabase && userIdRef.current) {
+      deleteUserGame(supabase, userIdRef.current, game.appid);
+    }
     persistGames(games.filter((g) => gameKey(g) !== key));
   }
 
   function clearAll() {
     if (!games.length) return;
     if (!confirm("Remove all games from the list?")) return;
+    if (supabase && userIdRef.current) {
+      deleteAllUserGames(supabase, userIdRef.current);
+    }
     persistGames([]);
   }
 
@@ -263,6 +340,8 @@ export default function HomePage() {
     }
 
     await supabase.auth.signOut();
+    clearGames();
+    userIdRef.current = null;
     router.replace("/auth/login");
     router.refresh();
   }
@@ -353,7 +432,7 @@ export default function HomePage() {
             strategy={rectSortingStrategy}
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {games.map((game) => {
+              {games.map((game, idx) => {
                 const key = gameKey(game);
                 return (
                   <SortableGameCard

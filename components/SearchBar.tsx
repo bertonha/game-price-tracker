@@ -144,7 +144,8 @@ export default function SearchBar({ onAdd, disabled }: Props) {
                       alt=""
                       width={40}
                       height={25}
-                      className="rounded object-cover flex-shrink-0"
+                      style={{ height: "auto" }}
+                      className="rounded flex-shrink-0"
                       unoptimized
                     />
                   )}

@@ -53,14 +53,14 @@ export default function StorePriceList({
               )}
             </div>
             {/* Edition sub-rows */}
-            {info?.editions?.map((ed) => {
+            {info?.editions?.map((ed, edIdx) => {
               const shortName =
                 ed.name
                   .replace(new RegExp(`^${gameName}\\s*[-–]?\\s*`, "i"), "")
                   .trim() || ed.name;
               return (
                 <div
-                  key={ed.name}
+                  key={`${ed.name}-${edIdx}`}
                   className="flex items-center gap-2 text-xs pl-7"
                 >
                   <span className="flex-1 text-gray-400 truncate italic">
