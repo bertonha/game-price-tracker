@@ -125,7 +125,7 @@ export async function fetchInstantGaming(name: string): Promise<StorePrice> {
 
       const seoName = hit.seo_name ?? "";
       if (!seoName || !hit.prod_id) continue;
-      const url = `https://www.instant-gaming.com/br/${hit.prod_id}-comprar-${seoName}/`;
+      const url = `https://www.instant-gaming.com/br/${hit.prod_id}-comprar-${seoName}/?currency=BRL`;
 
       // Match against the base game name only (strip edition suffix for scoring)
       const baseTitle = hit.edition ? title.replace(hit.edition, "").trim() : title;
