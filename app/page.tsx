@@ -189,7 +189,18 @@ export default function HomePage() {
       })
       .catch(() => {});
 
-    await Promise.all([steam, nuuvem]);
+    const instantGaming = fetch("/api/fetch-prices/instant-gaming", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: game.name }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.price) update("instant-gaming", d.price);
+      })
+      .catch(() => {});
+
+    await Promise.all([steam, nuuvem, instantGaming]);
   }
 
   async function addGame(
@@ -373,7 +384,7 @@ export default function HomePage() {
           </div>
         </div>
         <p className="text-sm text-gray-500">
-          Compare prices across Steam BR &amp; Nuuvem
+          Compare prices across Steam BR, Nuuvem &amp; Instant Gaming
         </p>
       </div>
 

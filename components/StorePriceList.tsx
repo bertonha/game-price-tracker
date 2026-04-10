@@ -52,8 +52,15 @@ export default function StorePriceList({
                 />
               )}
             </div>
-            {/* Edition sub-rows */}
-            {info?.editions?.map((ed, edIdx) => {
+            {/* Edition sub-rows — sorted by price ascending */}
+            {info?.editions
+              ?.slice()
+              .sort((a, b) => {
+                const parse = (p: string | null) =>
+                  p ? parseFloat(p.replace(/[^\d.]/g, "").replace(",", ".")) : Infinity;
+                return parse(a.price) - parse(b.price);
+              })
+              .map((ed, edIdx) => {
               const shortName =
                 ed.name
                   .replace(new RegExp(`^${gameName}\\s*[-–]?\\s*`, "i"), "")

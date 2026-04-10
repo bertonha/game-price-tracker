@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchSteam } from "@/lib/steam";
+import { fetchSteam } from "@/lib/stores/steam";
 
 export async function POST(req: NextRequest) {
   const { name, appid } = (await req.json()) as {
