@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint && prettier --check --write .",
+    "lint": "eslint && prettier --check --write . && tsc --noEmit",
     "prepare": "husky"
   },
   "dependencies": {
@@ -39,6 +42,6 @@
       "prettier --write",
       "tsc --noEmit"
     ],
-    "*.{ts,tsx,json,md}": "prettier --write"
+    "*.{json,md,css}": "prettier --write"
   }
 }
