@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 const STEAM_COUNTRY = process.env.STEAM_COUNTRY ?? "BR";
 const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "portuguese";
@@ -31,9 +31,16 @@ export async function GET(req: NextRequest) {
     const matchRegex =
       /data-ds-appid="(\d+)"[^>]*>[\s\S]*?<div[^>]+class="match_name"[^>]*>([^<]+)<\/div>[\s\S]*?<img[^>]+src="([^"]+)"/g;
 
-    let m: RegExpExecArray | null;
-    while ((m = matchRegex.exec(html)) !== null && results.length < 8) {
-      results.push({ appid: m[1]!, name: m[2]!.trim(), img: m[3]! });
+    for (
+      let m = matchRegex.exec(html);
+      m !== null && results.length < 8;
+      m = matchRegex.exec(html)
+    ) {
+      results.push({
+        appid: m[1] ?? "",
+        name: m[2]?.trim() ?? "",
+        img: m[3] ?? "",
+      });
     }
 
     return NextResponse.json({ results });

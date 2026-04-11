@@ -1,60 +1,50 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
-  Game,
-  GamePrices,
-  StorePrice,
-  SteamSuggestion,
-  STORES,
-} from "@/lib/types";
-import { loadGames, saveGames, clearGames } from "@/lib/storage";
-import {
-  loadUserGames,
-  upsertAllUserGames,
-  upsertUserGame,
-  deleteUserGame,
-  deleteAllUserGames,
-} from "@/lib/supabase/storage";
-import { gameKey } from "@/lib/utils";
-import SearchBar from "@/components/SearchBar";
-import StoreFilter from "@/components/StoreFilter";
-import GameCard from "@/components/GameCard";
-import {
-  DndContext,
   closestCenter,
+  DndContext,
+  type DragEndEvent,
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  useSortable,
-  arrayMove,
-  rectSortingStrategy,
-} from "@dnd-kit/sortable";
+import { arrayMove, rectSortingStrategy, SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import GameCard from "@/components/GameCard";
+import SearchBar from "@/components/SearchBar";
+import StoreFilter from "@/components/StoreFilter";
+import { clearGames, loadGames, saveGames } from "@/lib/storage";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  deleteAllUserGames,
+  deleteUserGame,
+  loadUserGames,
+  upsertAllUserGames,
+  upsertUserGame,
+} from "@/lib/supabase/storage";
+import {
+  type Game,
+  type GamePrices,
+  STORES,
+  type SteamSuggestion,
+  type StorePrice,
+} from "@/lib/types";
+import { gameKey } from "@/lib/utils";
 
 function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
   const key = gameKey(props.game);
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: key });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: key,
+  });
 
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={isDragging ? "opacity-50 z-10" : ""}
+      className={isDragging ? "z-10 opacity-50" : ""}
     >
       <GameCard {...props} dragHandleProps={{ ...attributes, ...listeners }} />
     </div>
@@ -67,13 +57,9 @@ export default function HomePage() {
   // Keep userId in a ref so callbacks always have the latest value without
   // needing it as a dependency.
   const userIdRef = useRef<string | null>(null);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [games, setGames] = useState<Game[]>([]);
-  const [activeStores, setActiveStores] = useState<Set<string>>(
-    new Set(STORES.map((s) => s.id)),
-  );
+  const [activeStores, setActiveStores] = useState<Set<string>>(new Set(STORES.map((s) => s.id)));
   const [refreshingKeys, setRefreshingKeys] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState("");
   const [progress, setProgress] = useState<number | null>(null);
@@ -203,9 +189,7 @@ export default function HomePage() {
     await Promise.all([steam, nuuvem, instantGaming]);
   }
 
-  async function addGame(
-    input: SteamSuggestion | { name: string; appid: string; img: string },
-  ) {
+  async function addGame(input: SteamSuggestion | { name: string; appid: string; img: string }) {
     const existing = games.find((g) => gameKey(g) === gameKey(input));
     if (existing) {
       setStatus(`"${input.name}" is already in your list.`);
@@ -259,9 +243,7 @@ export default function HomePage() {
     const game = games.find((g) => gameKey(g) === key);
     if (!game) return;
     setRefreshingKeys((prev) => new Set(prev).add(key));
-    setGames((prev) =>
-      prev.map((g) => (gameKey(g) === key ? { ...g, prices: {} } : g)),
-    );
+    setGames((prev) => prev.map((g) => (gameKey(g) === key ? { ...g, prices: {} } : g)));
     setStatus(`Refreshing "${game.name}"…`);
     try {
       await fetchPrices(game);
@@ -361,15 +343,15 @@ export default function HomePage() {
   if (!hydrated) return null;
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-8">
+    <main className="mx-auto max-w-5xl px-4 py-8">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between gap-4 mb-1">
-          <h1 className="text-2xl font-medium">Game Price Tracker</h1>
+        <div className="mb-1 flex items-center justify-between gap-4">
+          <h1 className="font-medium text-2xl">Game Price Tracker</h1>
           <div className="flex items-center gap-2">
             <Link
               href="/profile"
-              className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
             >
               Profile
             </Link>
@@ -377,13 +359,13 @@ export default function HomePage() {
               type="button"
               onClick={signOut}
               disabled={!supabase}
-              className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
             >
               Sign out
             </button>
           </div>
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-gray-500 text-sm">
           Compare prices across Steam BR, Nuuvem &amp; Instant Gaming
         </p>
       </div>
@@ -392,7 +374,7 @@ export default function HomePage() {
       <div className="mb-3">
         <SearchBar onAdd={addGame} />
       </div>
-      <p className="text-xs text-gray-400 mb-5">
+      <p className="mb-5 text-gray-400 text-xs">
         Accepts game names, Steam URLs (store.steampowered.com/app/…), or AppIDs
       </p>
 
@@ -402,34 +384,36 @@ export default function HomePage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <button
+          type="button"
           onClick={refreshAll}
           disabled={!games.length || refreshingKeys.size > 0}
-          className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm transition-colors hover:bg-gray-100 disabled:opacity-40 dark:border-gray-600 dark:hover:bg-gray-800"
         >
           Refresh all prices
         </button>
         <button
+          type="button"
           onClick={clearAll}
           disabled={!games.length}
-          className="text-sm px-3 py-1.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-40 transition-colors"
+          className="rounded-lg border border-red-200 px-3 py-1.5 text-red-600 text-sm transition-colors hover:bg-red-50 disabled:opacity-40 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/30"
         >
           Clear list
         </button>
         {games.length > 0 && (
-          <span className="text-xs text-gray-400 ml-auto">
+          <span className="ml-auto text-gray-400 text-xs">
             {games.length} game{games.length !== 1 ? "s" : ""} saved
           </span>
         )}
       </div>
 
       {/* Status + progress */}
-      {status && <p className="text-sm text-gray-500 mb-3">{status}</p>}
+      {status && <p className="mb-3 text-gray-500 text-sm">{status}</p>}
       {progress !== null && (
-        <div className="h-1 bg-gray-200 dark:bg-gray-700 rounded-full mb-4 overflow-hidden">
+        <div className="mb-4 h-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
           <div
-            className="h-full bg-gray-900 dark:bg-white rounded-full transition-all duration-300"
+            className="h-full rounded-full bg-gray-900 transition-all duration-300 dark:bg-white"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -437,23 +421,14 @@ export default function HomePage() {
 
       {/* Game grid */}
       {games.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">
-          <div className="text-4xl mb-4">🎮</div>
-          <p className="text-sm">
-            No games added yet — search for a game above to get started.
-          </p>
+        <div className="py-20 text-center text-gray-400">
+          <div className="mb-4 text-4xl">🎮</div>
+          <p className="text-sm">No games added yet — search for a game above to get started.</p>
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={games.map(gameKey)}
-            strategy={rectSortingStrategy}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={games.map(gameKey)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {games.map((game, idx) => {
                 const key = gameKey(game);
                 return (

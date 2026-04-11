@@ -12,10 +12,8 @@ export default function PriceCell({
   gameName?: string;
 }) {
   return (
-    <span className="flex items-center gap-1 flex-wrap justify-end">
-      <span
-        className={`font-medium ${isBest ? "text-emerald-600 dark:text-emerald-400" : ""}`}
-      >
+    <span className="flex flex-wrap items-center justify-end gap-1">
+      <span className={`font-medium ${isBest ? "text-emerald-600 dark:text-emerald-400" : ""}`}>
         {price}
       </span>
       {url && (
@@ -23,7 +21,7 @@ export default function PriceCell({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-500 hover:underline text-[10px]"
+          className="text-[10px] text-blue-500 hover:underline"
           aria-label={`View ${gameName ?? "game"} on ${storeName ?? "store"}`}
         >
           view ↗

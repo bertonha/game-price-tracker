@@ -1,10 +1,6 @@
-export const gameKey = (g: { appid?: string; name: string }): string =>
-  g.appid || g.name;
+export const gameKey = (g: { appid?: string; name: string }): string => g.appid || g.name;
 
-export function stripGamePrefix(
-  editionTitle: string,
-  baseName: string,
-): string {
+export function stripGamePrefix(editionTitle: string, baseName: string): string {
   const norm = (s: string) =>
     s
       .replace(/[™®©]/g, "")
@@ -35,7 +31,7 @@ export function parseGameInput(
 ): { type: "appid"; appid: string } | { type: "name"; name: string } | null {
   val = val.trim();
   const appUrlMatch = val.match(/store\.steampowered\.com\/app\/(\d+)/);
-  if (appUrlMatch) return { type: "appid", appid: appUrlMatch[1]! };
+  if (appUrlMatch?.[1]) return { type: "appid", appid: appUrlMatch[1] };
   if (/^\d{4,8}$/.test(val)) return { type: "appid", appid: val };
   if (val.length > 1) return { type: "name", name: val };
   return null;
@@ -49,7 +45,7 @@ export function bestDeal(
   for (const [store, info] of Object.entries(prices)) {
     if (!info?.price || info.price === "N/A") continue;
     const n = parseFloat(info.price.replace(/[^0-9.,]/g, "").replace(",", "."));
-    if (!isNaN(n) && (bestVal === null || n < bestVal)) {
+    if (!Number.isNaN(n) && (bestVal === null || n < bestVal)) {
       bestVal = n;
       bestStore = store;
     }

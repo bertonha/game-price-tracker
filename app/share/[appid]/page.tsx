@@ -25,11 +25,7 @@ async function getGameDetails(appid: string) {
   };
 }
 
-export default async function SharePage({
-  params,
-}: {
-  params: Promise<{ appid: string }>;
-}) {
+export default async function SharePage({ params }: { params: Promise<{ appid: string }> }) {
   const { appid } = await params;
 
   if (!/^\d+$/.test(appid)) notFound();
@@ -38,33 +34,25 @@ export default async function SharePage({
   if (!game) notFound();
 
   return (
-    <main className="min-h-screen flex flex-col items-center px-4 py-8">
+    <main className="flex min-h-screen flex-col items-center px-4 py-8">
       <div className="w-full max-w-lg">
         {/* Header image */}
-        <div className="relative h-52 bg-gray-100 dark:bg-gray-800 rounded-t-xl overflow-hidden">
+        <div className="relative h-52 overflow-hidden rounded-t-xl bg-gray-100 dark:bg-gray-800">
           {game.img ? (
-            <Image
-              src={game.img}
-              alt={game.name}
-              fill
-              className="object-cover"
-              unoptimized
-            />
+            <Image src={game.img} alt={game.name} fill className="object-cover" unoptimized />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-400 text-4xl">
-              🎮
-            </div>
+            <div className="flex h-full items-center justify-center text-4xl text-gray-400">🎮</div>
           )}
         </div>
 
         {/* Body */}
-        <div className="bg-white dark:bg-gray-900 border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-xl p-5 flex flex-col gap-4">
-          <h1 className="text-xl font-semibold leading-tight">{game.name}</h1>
+        <div className="flex flex-col gap-4 rounded-b-xl border border-gray-200 border-t-0 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
+          <h1 className="font-semibold text-xl leading-tight">{game.name}</h1>
 
           <ShareGamePrices appid={game.appid} name={game.name} />
 
           {/* Back link */}
-          <Link href="/" className="text-blue-500 hover:underline text-sm mt-2">
+          <Link href="/" className="mt-2 text-blue-500 text-sm hover:underline">
             ← Track prices for more games
           </Link>
         </div>

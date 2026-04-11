@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GamePrices } from "@/lib/types";
+import type { GamePrices } from "@/lib/types";
 import { bestDeal } from "@/lib/utils";
-import StorePriceList from "./StorePriceList";
 import BestDealBanner from "./BestDealBanner";
+import StorePriceList from "./StorePriceList";
 
 interface Props {
   appid: string;

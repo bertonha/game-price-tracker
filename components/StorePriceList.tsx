@@ -1,5 +1,5 @@
-import { STORES, StoreId } from "@/lib/types";
 import type { GamePrices } from "@/lib/types";
+import { STORES, type StoreId } from "@/lib/types";
 import PriceCell from "./PriceCell";
 
 type Store = (typeof STORES)[number];
@@ -11,33 +11,25 @@ interface Props {
   stores?: readonly Store[];
 }
 
-export default function StorePriceList({
-  prices,
-  gameName,
-  bestStore,
-  stores = STORES,
-}: Props) {
+export default function StorePriceList({ prices, gameName, bestStore, stores = STORES }: Props) {
   return (
     <div className="flex flex-col gap-1.5">
       {stores.map((store) => {
         const info = prices[store.id as StoreId];
-        const isBest =
-          bestStore === store.id && info?.price && info.price !== "N/A";
+        const isBest = bestStore === store.id && info?.price && info.price !== "N/A";
 
         return (
           <div key={store.id} className="flex flex-col gap-1">
             {/* Base game row */}
             <div className="flex items-center gap-2 text-xs">
               <span
-                className="w-5 h-5 rounded flex items-center justify-center text-white font-semibold flex-shrink-0"
+                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded font-semibold text-white"
                 style={{ background: store.color, fontSize: 9 }}
                 aria-hidden="true"
               >
                 {store.abbr}
               </span>
-              <span className="flex-1 text-gray-500 truncate">
-                {store.name}
-              </span>
+              <span className="flex-1 truncate text-gray-500">{store.name}</span>
               {!info ? (
                 <span className="text-gray-400 italic">checking…</span>
               ) : !info.price || info.price === "N/A" ? (
@@ -57,24 +49,16 @@ export default function StorePriceList({
               ?.slice()
               .sort((a, b) => {
                 const parse = (p: string | null) =>
-                  p
-                    ? parseFloat(p.replace(/[^\d.]/g, "").replace(",", "."))
-                    : Infinity;
+                  p ? parseFloat(p.replace(/[^\d.]/g, "").replace(",", ".")) : Infinity;
                 return parse(a.price) - parse(b.price);
               })
-              .map((ed, edIdx) => {
+              .map((ed) => {
                 const shortName =
-                  ed.name
-                    .replace(new RegExp(`^${gameName}\\s*[-–]?\\s*`, "i"), "")
-                    .trim() || ed.name;
+                  ed.name.replace(new RegExp(`^${gameName}\\s*[-–]?\\s*`, "i"), "").trim() ||
+                  ed.name;
                 return (
-                  <div
-                    key={`${ed.name}-${edIdx}`}
-                    className="flex items-center gap-2 text-xs pl-7"
-                  >
-                    <span className="flex-1 text-gray-400 truncate italic">
-                      {shortName}
-                    </span>
+                  <div key={ed.name} className="flex items-center gap-2 pl-7 text-xs">
+                    <span className="flex-1 truncate text-gray-400 italic">{shortName}</span>
                     {!ed.price || ed.price === "N/A" ? (
                       <span className="text-gray-400">N/A</span>
                     ) : (

@@ -1,4 +1,4 @@
-import { Game } from "./types";
+import type { Game } from "./types";
 
 const STORAGE_KEY = "game-price-tracker-v1";
 
@@ -16,16 +16,12 @@ export function saveGames(games: Game[]): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
-  } catch {
-    console.warn("Could not save games to localStorage");
-  }
+  } catch {}
 }
 
 export function clearGames(): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    console.warn("Could not clear games from localStorage");
-  }
+  } catch {}
 }

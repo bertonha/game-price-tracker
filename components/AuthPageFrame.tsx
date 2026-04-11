@@ -14,12 +14,12 @@ export default function AuthPageFrame({
   footer,
 }: AuthPageFrameProps) {
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold mb-1">{title}</h1>
-        <p className="text-sm text-gray-500 mb-6">{description}</p>
+    <main className="flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <h1 className="mb-1 font-semibold text-2xl">{title}</h1>
+        <p className="mb-6 text-gray-500 text-sm">{description}</p>
         {children}
-        <div className="text-sm text-gray-500 mt-6">{footer}</div>
+        <div className="mt-6 text-gray-500 text-sm">{footer}</div>
       </div>
     </main>
   );

@@ -9,18 +9,19 @@ interface Props {
 
 export default function StoreFilter({ activeStores, onToggle }: Props) {
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-xs text-gray-500">Stores:</span>
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-gray-500 text-xs">Stores:</span>
       {STORES.map((store) => {
         const active = activeStores.has(store.id);
         return (
           <button
+            type="button"
             key={store.id}
             onClick={() => onToggle(store.id)}
-            className={`text-xs px-3 py-1 rounded-full border transition-all ${
+            className={`rounded-full border px-3 py-1 text-xs transition-all ${
               active
-                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 border-gray-900 dark:border-white"
-                : "bg-transparent text-gray-500 border-gray-300 dark:border-gray-600 hover:border-gray-500"
+                ? "border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900"
+                : "border-gray-300 bg-transparent text-gray-500 hover:border-gray-500 dark:border-gray-600"
             }`}
           >
             {store.name}

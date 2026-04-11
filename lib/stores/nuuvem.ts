@@ -18,11 +18,9 @@ const XHR_HEADERS: Record<string, string> = {
 /** Decode an HTML-encoded data-price attribute and format as "R$ X,XX". */
 function decodePrice(encoded: string): string | null {
   try {
-    const json = JSON.parse(
-      encoded.replace(/&quot;/g, '"').replace(/&amp;/g, "&"),
-    );
+    const json = JSON.parse(encoded.replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
     const cents: number = json.v ?? json.iv * 100;
-    return "R$ " + (cents / 100).toFixed(2).replace(".", ",");
+    return `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
   } catch {
     return null;
   }
@@ -64,10 +62,7 @@ function matchScore(query: string, title: string): number {
   const tWords = new Set(normalize(title));
   for (const w of qWords) if (!tWords.has(w)) return 0;
   let score = qWords.size / new Set([...qWords, ...tWords]).size;
-  if (
-    OLD_EDITION_QUALIFIERS.test(title) &&
-    !OLD_EDITION_QUALIFIERS.test(query)
-  ) {
+  if (OLD_EDITION_QUALIFIERS.test(title) && !OLD_EDITION_QUALIFIERS.test(query)) {
     score *= 0.8;
   }
   return score;
@@ -129,8 +124,7 @@ function parseEditionCards(
     /<div[^>]*class="[^"]*game-card[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/g;
 
   const editions: Edition[] = [];
-  let match;
-  while ((match = cardRegex.exec(html)) !== null) {
+  for (let match = cardRegex.exec(html); match !== null; match = cardRegex.exec(html)) {
     const card = match[0];
     const nameMatch = card.match(/game-card__product-name[^>]*>([^<]+)</);
     const cardName = nameMatch?.[1]?.trim() ?? "";
@@ -184,12 +178,7 @@ async function fetchNuuvemByUrl(
 
     let editions: Edition[] | undefined;
     if (pageRes?.ok) {
-      editions = parseEditionCards(
-        await pageRes.text(),
-        name,
-        price,
-        imageIdToUrl,
-      );
+      editions = parseEditionCards(await pageRes.text(), name, price, imageIdToUrl);
     }
 
     return { price, url: itemUrl, editions };

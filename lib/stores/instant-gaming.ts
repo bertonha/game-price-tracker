@@ -10,14 +10,13 @@ function getExchangeRate(from: string): Promise<number> {
         signal: AbortSignal.timeout(5_000),
       })
         .then((res) => {
-          if (!res.ok)
-            throw new Error(`Exchange rate fetch failed: ${res.status}`);
+          if (!res.ok) throw new Error(`Exchange rate fetch failed: ${res.status}`);
           return res.json() as Promise<{ rates: { BRL: number } }>;
         })
         .then((data) => data.rates.BRL),
     );
   }
-  return rateCache.get(from)!;
+  return rateCache.get(from) as Promise<number>;
 }
 
 const ALGOLIA_URL =
@@ -61,17 +60,14 @@ function matchScore(query: string, title: string): number {
   const tWords = new Set(normalize(title));
   for (const w of qWords) if (!tWords.has(w)) return 0;
   let score = qWords.size / new Set([...qWords, ...tWords]).size;
-  if (
-    OLD_EDITION_QUALIFIERS.test(title) &&
-    !OLD_EDITION_QUALIFIERS.test(query)
-  ) {
+  if (OLD_EDITION_QUALIFIERS.test(title) && !OLD_EDITION_QUALIFIERS.test(query)) {
     score *= 0.8;
   }
   return score;
 }
 
 function formatPrice(price: number): string {
-  return "R$ " + price.toFixed(2).replace(".", ",");
+  return `R$ ${price.toFixed(2).replace(".", ",")}`;
 }
 
 export async function fetchInstantGaming(name: string): Promise<StorePrice> {
@@ -91,8 +87,7 @@ export async function fetchInstantGaming(name: string): Promise<StorePrice> {
       headers: {
         "content-type": "application/x-www-form-urlencoded",
         accept: "application/json",
-        "user-agent":
-          "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
+        "user-agent": "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0",
         origin: "https://www.instant-gaming.com",
         referer: "https://www.instant-gaming.com/",
       },
@@ -124,7 +119,7 @@ export async function fetchInstantGaming(name: string): Promise<StorePrice> {
       if (hit.is_dlc === 1 || EXCLUDE.test(title)) continue;
 
       // currency_prices values are in retail_currency — convert to BRL
-      const priceInRetailCurrency = hit.currency_prices?.["BRL"];
+      const priceInRetailCurrency = hit.currency_prices?.BRL;
       if (!priceInRetailCurrency || priceInRetailCurrency <= 0) continue;
       const brlPrice = priceInRetailCurrency * eurToBrl;
 
@@ -133,9 +128,7 @@ export async function fetchInstantGaming(name: string): Promise<StorePrice> {
       const url = `https://www.instant-gaming.com/br/${hit.prod_id}-comprar-${seoName}/?currency=BRL`;
 
       // Match against the base game name only (strip edition suffix for scoring)
-      const baseTitle = hit.edition
-        ? title.replace(hit.edition, "").trim()
-        : title;
+      const baseTitle = hit.edition ? title.replace(hit.edition, "").trim() : title;
       const score = matchScore(name, baseTitle);
       if (score <= 0) continue;
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useMemo } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export const MISSING_SUPABASE_ENV_ERROR =
@@ -21,10 +21,7 @@ export function getAuthCallbackUrl(nextPath?: string): string {
   return url.toString();
 }
 
-export async function signInWithGoogle(
-  supabase: SupabaseClient,
-  nextPath?: string,
-) {
+export async function signInWithGoogle(supabase: SupabaseClient, nextPath?: string) {
   return supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -33,9 +30,6 @@ export async function signInWithGoogle(
   });
 }
 
-export async function updatePassword(
-  supabase: SupabaseClient,
-  newPassword: string,
-) {
+export async function updatePassword(supabase: SupabaseClient, newPassword: string) {
   return supabase.auth.updateUser({ password: newPassword });
 }

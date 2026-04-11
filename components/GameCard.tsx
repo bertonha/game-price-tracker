@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Game, STORES } from "@/lib/types";
-import { timeAgo, bestDeal, gameKey } from "@/lib/utils";
-import StorePriceList from "./StorePriceList";
+import { type Game, STORES } from "@/lib/types";
+import { bestDeal, gameKey, timeAgo } from "@/lib/utils";
 import BestDealBanner from "./BestDealBanner";
+import StorePriceList from "./StorePriceList";
 
 interface Props {
   game: Game;
@@ -34,12 +34,12 @@ export default function GameCard({
   return (
     <article
       aria-label={game.name}
-      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden flex flex-col"
+      className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
     >
       {/* Header image — also the drag handle */}
       <div
         {...dragHandleProps}
-        className={`relative h-36 bg-gray-100 dark:bg-gray-800 flex-shrink-0 ${dragHandleProps ? "cursor-grab active:cursor-grabbing" : ""}`}
+        className={`relative h-36 flex-shrink-0 bg-gray-100 dark:bg-gray-800 ${dragHandleProps ? "cursor-grab active:cursor-grabbing" : ""}`}
       >
         {game.img ? (
           <Image
@@ -51,37 +51,34 @@ export default function GameCard({
             unoptimized
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-gray-400 text-2xl">
-            🎮
-          </div>
+          <div className="flex h-full items-center justify-center text-2xl text-gray-400">🎮</div>
         )}
       </div>
 
       {/* Body */}
-      <div className="p-3 flex flex-col gap-2 flex-1">
+      <div className="flex flex-1 flex-col gap-2 p-3">
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-medium leading-tight flex-1 min-w-0">
-            {game.name}
-          </h3>
-          <div className="flex gap-1 flex-shrink-0">
+          <h3 className="min-w-0 flex-1 font-medium text-sm leading-tight">{game.name}</h3>
+          <div className="flex flex-shrink-0 gap-1">
             {game.appid && (
               <Link
                 href={`/share/${game.appid}`}
                 target="_blank"
                 aria-label={`Share ${game.name}`}
                 title="Share"
-                className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors text-xs"
+                className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
               >
                 <span aria-hidden="true">↗</span>
               </Link>
             )}
             <button
+              type="button"
               onClick={() => onRefresh(key)}
               disabled={refreshing}
               aria-label={`Refresh prices for ${game.name}`}
               title="Refresh prices"
-              className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-xs"
+              className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             >
               {refreshing ? (
                 <span className="inline-block animate-spin" aria-hidden="true">
@@ -92,10 +89,11 @@ export default function GameCard({
               )}
             </button>
             <button
+              type="button"
               onClick={() => onRemove(key)}
               aria-label={`Remove ${game.name}`}
               title="Remove game"
-              className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-xs"
+              className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30"
             >
               <span aria-hidden="true">✕</span>
             </button>
@@ -113,7 +111,7 @@ export default function GameCard({
 
         {/* Last updated */}
         {game.lastFetched && (
-          <p className="text-[10px] text-gray-400 mt-auto">
+          <p className="mt-auto text-[10px] text-gray-400">
             Updated{" "}
             <time dateTime={new Date(game.lastFetched).toISOString()}>
               {timeAgo(game.lastFetched)}

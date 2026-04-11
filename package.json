@@ -10,7 +10,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint && prettier --check --write . && tsc --noEmit",
+    "lint": "biome check . && tsc --noEmit",
+    "format": "biome format --write .",
     "prepare": "lefthook install"
   },
   "dependencies": {
@@ -24,15 +25,13 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.11",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "^16.2.2",
     "lefthook": "^2.1.5",
-    "prettier": "^3.8.1",
     "tailwindcss": "^4",
     "typescript": "^6.0.2"
-  },
+  }
 }

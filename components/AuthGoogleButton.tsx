@@ -30,7 +30,7 @@ export default function AuthGoogleButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full rounded-lg border border-gray-300 dark:border-gray-700 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60 inline-flex items-center justify-center gap-2"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 py-2.5 font-medium text-sm hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-800"
     >
       <GoogleIcon />
       {children}

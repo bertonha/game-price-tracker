@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
 import { getSupabaseEnv } from "@/lib/supabase/config";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -32,10 +32,7 @@ export async function POST() {
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id);
 
   if (deleteError) {
-    return NextResponse.json(
-      { error: "Could not delete account." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Could not delete account." }, { status: 500 });
   }
 
   await supabase.auth.signOut();

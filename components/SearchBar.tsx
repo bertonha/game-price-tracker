@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { SteamSuggestion } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
+import type { SteamSuggestion } from "@/lib/types";
 
 interface Props {
-  onAdd: (
-    game: SteamSuggestion | { name: string; appid: string; img: string },
-  ) => void;
+  onAdd: (game: SteamSuggestion | { name: string; appid: string; img: string }) => void;
   disabled?: boolean;
 }
 
@@ -38,19 +36,14 @@ export default function SearchBar({ onAdd, disabled }: Props) {
       return;
     }
     // Don't autocomplete if it looks like a URL or appid
-    if (
-      /store\.steampowered\.com\/app\/\d+/.test(val) ||
-      /^\d{4,8}$/.test(val.trim())
-    ) {
+    if (/store\.steampowered\.com\/app\/\d+/.test(val) || /^\d{4,8}$/.test(val.trim())) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `/api/search-games?q=${encodeURIComponent(val)}`,
-        );
+        const res = await fetch(`/api/search-games?q=${encodeURIComponent(val)}`);
         const data = await res.json();
         setSuggestions(data.results ?? []);
         setShowSuggestions(true);
@@ -96,9 +89,7 @@ export default function SearchBar({ onAdd, disabled }: Props) {
         pickSuggestion(first);
       } else {
         try {
-          const res = await fetch(
-            `/api/search-games?q=${encodeURIComponent(val)}`,
-          );
+          const res = await fetch(`/api/search-games?q=${encodeURIComponent(val)}`);
           const data = await res.json();
           const top: SteamSuggestion | undefined = data.results?.[0];
           if (top) {
@@ -116,7 +107,7 @@ export default function SearchBar({ onAdd, disabled }: Props) {
 
   return (
     <div ref={wrapRef} className="relative flex gap-2">
-      <div className="relative flex-1 min-w-0">
+      <div className="relative min-w-0 flex-1">
         <input
           type="text"
           value={query}
@@ -126,17 +117,18 @@ export default function SearchBar({ onAdd, disabled }: Props) {
             if (e.key === "Escape") setShowSuggestions(false);
           }}
           placeholder="Game name, Steam URL, or AppID…"
-          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
           disabled={disabled}
           autoComplete="off"
         />
         {showSuggestions && suggestions.length > 0 && (
-          <ul className="absolute top-full mt-1 left-0 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg z-20 overflow-hidden shadow-lg">
+          <ul className="absolute top-full right-0 left-0 z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
             {suggestions.map((g) => (
               <li key={g.appid}>
                 <button
+                  type="button"
                   onMouseDown={() => pickSuggestion(g)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   {g.img && (
                     <Image
@@ -145,13 +137,11 @@ export default function SearchBar({ onAdd, disabled }: Props) {
                       width={120}
                       height={45}
                       style={{ width: "56px", height: "auto" }}
-                      className="rounded flex-shrink-0"
+                      className="flex-shrink-0 rounded"
                       unoptimized
                     />
                   )}
-                  <span className="truncate text-gray-800 dark:text-gray-200">
-                    {g.name}
-                  </span>
+                  <span className="truncate text-gray-800 dark:text-gray-200">{g.name}</span>
                 </button>
               </li>
             ))}
@@ -159,9 +149,10 @@ export default function SearchBar({ onAdd, disabled }: Props) {
         )}
       </div>
       <button
+        type="button"
         onClick={handleSubmit}
         disabled={disabled || loading || !query.trim()}
-        className="px-4 py-2 text-sm font-medium bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg hover:opacity-85 disabled:opacity-40 transition-opacity whitespace-nowrap"
+        className="whitespace-nowrap rounded-lg bg-gray-900 px-4 py-2 font-medium text-sm text-white transition-opacity hover:opacity-85 disabled:opacity-40 dark:bg-white dark:text-gray-900"
       >
         {loading ? "Adding…" : "Add game"}
       </button>

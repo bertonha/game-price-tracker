@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   MISSING_SUPABASE_ENV_ERROR,
-  useSupabaseBrowserClient,
   updatePassword,
+  useSupabaseBrowserClient,
 } from "@/lib/supabase/browser-auth";
 
 export default function ProfilePage() {
@@ -90,9 +90,7 @@ export default function ProfilePage() {
     router.refresh();
   }
 
-  async function updatePasswordHandler(
-    e: React.SyntheticEvent<HTMLFormElement>,
-  ) {
+  async function updatePasswordHandler(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
 
     if (!supabase) {
@@ -121,10 +119,7 @@ export default function ProfilePage() {
 
     setPasswordLoading(true);
 
-    const { error: updateError } = await updatePassword(
-      supabase,
-      passwordForm.newPassword,
-    );
+    const { error: updateError } = await updatePassword(supabase, passwordForm.newPassword);
 
     if (updateError) {
       setPasswordError(updateError.message || "Failed to update password.");
@@ -142,36 +137,34 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto px-4 py-8">
+    <main className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Profile</h1>
+        <h1 className="font-semibold text-2xl">Profile</h1>
         <Link
           href="/"
-          className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
         >
           Back to tracker
         </Link>
       </div>
 
-      <section className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 mb-5">
-        <h2 className="text-sm font-medium mb-1">Account</h2>
-        <p className="text-sm text-gray-500">Signed in as</p>
-        <p className="text-sm mt-1 break-all">{email || "-"}</p>
+      <section className="mb-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <h2 className="mb-1 font-medium text-sm">Account</h2>
+        <p className="text-gray-500 text-sm">Signed in as</p>
+        <p className="mt-1 break-all text-sm">{email || "-"}</p>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 mb-5">
-        <div className="flex items-center justify-between mb-4">
+      <section className="mb-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-medium mb-1">Password</h2>
-            <p className="text-sm text-gray-500">
-              Change your account password
-            </p>
+            <h2 className="mb-1 font-medium text-sm">Password</h2>
+            <p className="text-gray-500 text-sm">Change your account password</p>
           </div>
           <button
             type="button"
             onClick={() => setPasswordFormOpen(!passwordFormOpen)}
             disabled={loading}
-            className="text-xs px-3 py-1.5 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
           >
             {passwordFormOpen ? "Cancel" : "Change"}
           </button>
@@ -180,10 +173,11 @@ export default function ProfilePage() {
         {passwordFormOpen && (
           <form onSubmit={updatePasswordHandler} className="mt-4 space-y-3">
             <div>
-              <label className="block text-xs font-medium mb-1">
+              <label htmlFor="new-password" className="mb-1 block font-medium text-xs">
                 New password
               </label>
               <input
+                id="new-password"
                 type="password"
                 value={passwordForm.newPassword}
                 onChange={(e) =>
@@ -194,15 +188,16 @@ export default function ProfilePage() {
                 }
                 placeholder="Enter new password"
                 disabled={passwordLoading}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1">
+              <label htmlFor="confirm-password" className="mb-1 block font-medium text-xs">
                 Confirm password
               </label>
               <input
+                id="confirm-password"
                 type="password"
                 value={passwordForm.confirmPassword}
                 onChange={(e) =>
@@ -213,24 +208,20 @@ export default function ProfilePage() {
                 }
                 placeholder="Confirm new password"
                 disabled={passwordLoading}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
               />
             </div>
 
-            {passwordError && (
-              <p className="text-sm text-red-500">{passwordError}</p>
-            )}
+            {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
 
             {passwordNotice && (
-              <p className="text-sm text-green-600 dark:text-green-400">
-                {passwordNotice}
-              </p>
+              <p className="text-green-600 text-sm dark:text-green-400">{passwordNotice}</p>
             )}
 
             <button
               type="submit"
               disabled={passwordLoading}
-              className="w-full rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-sm text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {passwordLoading ? "Updating..." : "Update password"}
             </button>
@@ -238,28 +229,20 @@ export default function ProfilePage() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-red-200 dark:border-red-900/60 bg-white dark:bg-gray-900 p-5">
-        <h2 className="text-sm font-medium text-red-700 dark:text-red-400 mb-1">
-          Delete account
-        </h2>
-        <p className="text-sm text-gray-500 mb-4">
+      <section className="rounded-2xl border border-red-200 bg-white p-5 dark:border-red-900/60 dark:bg-gray-900">
+        <h2 className="mb-1 font-medium text-red-700 text-sm dark:text-red-400">Delete account</h2>
+        <p className="mb-4 text-gray-500 text-sm">
           This permanently deletes your account and signs you out immediately.
         </p>
 
-        {displayedError && (
-          <p className="text-sm text-red-500 mt-3">{displayedError}</p>
-        )}
-        {notice && (
-          <p className="text-sm text-green-600 dark:text-green-400 mt-3">
-            {notice}
-          </p>
-        )}
+        {displayedError && <p className="mt-3 text-red-500 text-sm">{displayedError}</p>}
+        {notice && <p className="mt-3 text-green-600 text-sm dark:text-green-400">{notice}</p>}
 
         <button
           type="button"
           onClick={deleteAccount}
           disabled={loading || deleting}
-          className="mt-4 rounded-lg border border-red-300 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-2 text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+          className="mt-4 rounded-lg border border-red-300 px-4 py-2 font-medium text-red-700 text-sm hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
         >
           {deleting ? "Deleting account..." : "Delete my account"}
         </button>

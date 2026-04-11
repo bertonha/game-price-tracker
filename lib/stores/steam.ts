@@ -4,8 +4,7 @@ import { stripGamePrefix } from "@/lib/utils";
 const STEAM_COUNTRY = process.env.STEAM_COUNTRY ?? "BR";
 const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "portuguese";
 
-const EXCLUDE_KEYWORDS =
-  /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
+const EXCLUDE_KEYWORDS = /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
 
 const decodeHtml = (s: string) =>
   s
@@ -19,10 +18,7 @@ const decodeHtml = (s: string) =>
     .replace(/&ndash;/g, "–")
     .replace(/&mdash;/g, "—");
 
-export async function fetchSteam(
-  appid: string,
-  name: string,
-): Promise<StorePrice> {
+export async function fetchSteam(appid: string, name: string): Promise<StorePrice> {
   const storeUrl = `https://store.steampowered.com/app/${appid}/?cc=${STEAM_COUNTRY}`;
   try {
     const res = await fetch(
@@ -78,9 +74,7 @@ export async function fetchSteam(
           ),
           name,
         ),
-        price:
-          "R$ " +
-          (s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ","),
+        price: `R$ ${(s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ",")}`,
         url: `https://store.steampowered.com/sub/${s.packageid}/?cc=BR`,
       }));
 

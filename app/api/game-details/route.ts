@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 const STEAM_COUNTRY = process.env.STEAM_COUNTRY ?? "BR";
 const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "portuguese";
@@ -15,8 +15,7 @@ export async function GET(req: NextRequest) {
       `?appids=${appid}&cc=${STEAM_COUNTRY}&l=${STEAM_LANGUAGE}`;
 
     const res = await fetch(url, { next: { revalidate: 3600 } });
-    if (!res.ok)
-      return NextResponse.json({ error: "Steam API error" }, { status: 502 });
+    if (!res.ok) return NextResponse.json({ error: "Steam API error" }, { status: 502 });
 
     const data = await res.json();
     const appData = data[appid]?.data;
@@ -30,9 +29,6 @@ export async function GET(req: NextRequest) {
       img: appData.header_image as string,
     });
   } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch game details" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch game details" }, { status: 500 });
   }
 }

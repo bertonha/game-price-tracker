@@ -1,7 +1,7 @@
 "use client";
 
-import { SubmitEvent, useState } from "react";
 import Link from "next/link";
+import { type SubmitEvent, useState } from "react";
 import AuthGoogleButton from "@/components/AuthGoogleButton";
 import AuthPageFrame from "@/components/AuthPageFrame";
 import {
@@ -75,10 +75,7 @@ export default function SignupPage() {
       footer={
         <>
           Already have one?{" "}
-          <Link
-            href="/auth/login"
-            className="text-gray-900 dark:text-gray-100 underline"
-          >
+          <Link href="/auth/login" className="text-gray-900 underline dark:text-gray-100">
             Sign in
           </Link>
         </>
@@ -86,47 +83,41 @@ export default function SignupPage() {
     >
       <form className="space-y-4" onSubmit={handleSignup}>
         <label className="block">
-          <span className="text-sm text-gray-600 dark:text-gray-300">
-            Email
-          </span>
+          <span className="text-gray-600 text-sm dark:text-gray-300">Email</span>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-400"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-400 dark:border-gray-700"
           />
         </label>
 
         <label className="block">
-          <span className="text-sm text-gray-600 dark:text-gray-300">
-            Password
-          </span>
+          <span className="text-gray-600 text-sm dark:text-gray-300">Password</span>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
-            className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-400"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-400 dark:border-gray-700"
           />
         </label>
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
-        {notice && (
-          <p className="text-sm text-green-600 dark:text-green-400">{notice}</p>
-        )}
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+        {notice && <p className="text-green-600 text-sm dark:text-green-400">{notice}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white py-2.5 text-sm font-medium disabled:opacity-60"
+          className="w-full rounded-lg bg-gray-900 py-2.5 font-medium text-sm text-white disabled:opacity-60 dark:bg-white dark:text-gray-900"
         >
           {loading ? "Creating account..." : "Create account"}
         </button>
       </form>
 
-      <div className="my-4 flex items-center gap-3 text-xs text-gray-400">
+      <div className="my-4 flex items-center gap-3 text-gray-400 text-xs">
         <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
         <span>OR</span>
         <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
