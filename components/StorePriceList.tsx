@@ -57,36 +57,38 @@ export default function StorePriceList({
               ?.slice()
               .sort((a, b) => {
                 const parse = (p: string | null) =>
-                  p ? parseFloat(p.replace(/[^\d.]/g, "").replace(",", ".")) : Infinity;
+                  p
+                    ? parseFloat(p.replace(/[^\d.]/g, "").replace(",", "."))
+                    : Infinity;
                 return parse(a.price) - parse(b.price);
               })
               .map((ed, edIdx) => {
-              const shortName =
-                ed.name
-                  .replace(new RegExp(`^${gameName}\\s*[-–]?\\s*`, "i"), "")
-                  .trim() || ed.name;
-              return (
-                <div
-                  key={`${ed.name}-${edIdx}`}
-                  className="flex items-center gap-2 text-xs pl-7"
-                >
-                  <span className="flex-1 text-gray-400 truncate italic">
-                    {shortName}
-                  </span>
-                  {!ed.price || ed.price === "N/A" ? (
-                    <span className="text-gray-400">N/A</span>
-                  ) : (
-                    <PriceCell
-                      price={ed.price}
-                      url={ed.url}
-                      isBest={false}
-                      storeName={store.name}
-                      gameName={`${gameName} ${shortName}`}
-                    />
-                  )}
-                </div>
-              );
-            })}
+                const shortName =
+                  ed.name
+                    .replace(new RegExp(`^${gameName}\\s*[-–]?\\s*`, "i"), "")
+                    .trim() || ed.name;
+                return (
+                  <div
+                    key={`${ed.name}-${edIdx}`}
+                    className="flex items-center gap-2 text-xs pl-7"
+                  >
+                    <span className="flex-1 text-gray-400 truncate italic">
+                      {shortName}
+                    </span>
+                    {!ed.price || ed.price === "N/A" ? (
+                      <span className="text-gray-400">N/A</span>
+                    ) : (
+                      <PriceCell
+                        price={ed.price}
+                        url={ed.url}
+                        isBest={false}
+                        storeName={store.name}
+                        gameName={`${gameName} ${shortName}`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
           </div>
         );
       })}

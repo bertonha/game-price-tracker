@@ -10,10 +10,11 @@ function getExchangeRate(from: string): Promise<number> {
         signal: AbortSignal.timeout(5_000),
       })
         .then((res) => {
-          if (!res.ok) throw new Error(`Exchange rate fetch failed: ${res.status}`);
+          if (!res.ok)
+            throw new Error(`Exchange rate fetch failed: ${res.status}`);
           return res.json() as Promise<{ rates: { BRL: number } }>;
         })
-        .then((data) => data.rates.BRL)
+        .then((data) => data.rates.BRL),
     );
   }
   return rateCache.get(from)!;
@@ -111,7 +112,11 @@ export async function fetchInstantGaming(name: string): Promise<StorePrice> {
     let basePrice: string | null = null;
     let baseUrl: string | null = null;
     let bestBaseScore = 0;
-    const editions: { name: string; price: string | null; url: string | null }[] = [];
+    const editions: {
+      name: string;
+      price: string | null;
+      url: string | null;
+    }[] = [];
 
     for (const hit of data.hits) {
       const title = hit.en_name ?? "";
@@ -128,7 +133,9 @@ export async function fetchInstantGaming(name: string): Promise<StorePrice> {
       const url = `https://www.instant-gaming.com/br/${hit.prod_id}-comprar-${seoName}/?currency=BRL`;
 
       // Match against the base game name only (strip edition suffix for scoring)
-      const baseTitle = hit.edition ? title.replace(hit.edition, "").trim() : title;
+      const baseTitle = hit.edition
+        ? title.replace(hit.edition, "").trim()
+        : title;
       const score = matchScore(name, baseTitle);
       if (score <= 0) continue;
 

@@ -64,7 +64,10 @@ function matchScore(query: string, title: string): number {
   const tWords = new Set(normalize(title));
   for (const w of qWords) if (!tWords.has(w)) return 0;
   let score = qWords.size / new Set([...qWords, ...tWords]).size;
-  if (OLD_EDITION_QUALIFIERS.test(title) && !OLD_EDITION_QUALIFIERS.test(query)) {
+  if (
+    OLD_EDITION_QUALIFIERS.test(title) &&
+    !OLD_EDITION_QUALIFIERS.test(query)
+  ) {
     score *= 0.8;
   }
   return score;
