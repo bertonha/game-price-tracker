@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint && prettier --check --write . && tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "lefthook install"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -30,18 +30,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^16.2.2",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
+    "lefthook": "^2.1.5",
     "prettier": "^3.8.1",
     "tailwindcss": "^4",
     "typescript": "^6.0.2"
   },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write",
-      "tsc --noEmit"
-    ],
-    "*.{json,md,css}": "prettier --write"
-  }
 }
