@@ -12,6 +12,8 @@
     "start": "next start",
     "lint": "biome check . && tsc --noEmit",
     "format": "biome format --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepare": "lefthook install"
   },
   "dependencies": {
@@ -32,6 +34,7 @@
     "@types/react-dom": "^19",
     "lefthook": "^2.1.5",
     "tailwindcss": "^4",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
   }
 }

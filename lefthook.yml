@@ -7,3 +7,8 @@ pre-commit:
       stage_fixed: true
     typecheck:
       run: npx tsc --noEmit
+
+pre-push:
+  commands:
+    test:
+      run: npm test

@@ -16,7 +16,7 @@ const XHR_HEADERS: Record<string, string> = {
 };
 
 /** Decode an HTML-encoded data-price attribute and format as "R$ X,XX". */
-function decodePrice(encoded: string): string | null {
+export function decodePrice(encoded: string): string | null {
   try {
     const json = JSON.parse(encoded.replace(/&quot;/g, '"').replace(/&amp;/g, "&"));
     const cents: number = json.v ?? json.iv * 100;
@@ -48,7 +48,7 @@ const OLD_EDITION_QUALIFIERS = /\b(goty|classic|legacy|game of the year)\b/i;
  *  otherwise returns Jaccard overlap as a tiebreaker.
  *  Titles that carry old-edition qualifiers not present in the query are
  *  penalised so a more relevant result wins the tie. */
-function matchScore(query: string, title: string): number {
+export function matchScore(query: string, title: string): number {
   const normalize = (s: string) =>
     s
       .toLowerCase()

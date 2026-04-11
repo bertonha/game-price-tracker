@@ -6,7 +6,7 @@ const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "portuguese";
 
 const EXCLUDE_KEYWORDS = /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
 
-const decodeHtml = (s: string) =>
+export const decodeHtml = (s: string) =>
   s
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
