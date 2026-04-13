@@ -3,16 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { saveGames } from "@/lib/storage";
 import {
   MISSING_SUPABASE_ENV_ERROR,
   updatePassword,
   useSupabaseBrowserClient,
 } from "@/lib/supabase/browser-auth";
+import { loadUserGames } from "@/lib/supabase/storage";
+import type { Game } from "@/lib/types";
 
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = useSupabaseBrowserClient();
   const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,6 +29,13 @@ export default function ProfilePage() {
     newPassword: "",
     confirmPassword: "",
   });
+  const [steamProfileId, setSteamProfileId] = useState("");
+  const [steamInput, setSteamInput] = useState("");
+  const [steamSaving, setSteamSaving] = useState(false);
+  const [steamLoading, setSteamLoading] = useState(false);
+  const [steamProgress, setSteamProgress] = useState<{ done: number; total: number } | null>(null);
+  const [steamError, setSteamError] = useState("");
+  const [steamNotice, setSteamNotice] = useState("");
   const displayedError = error || (!supabase ? MISSING_SUPABASE_ENV_ERROR : "");
 
   useEffect(() => {
@@ -49,6 +60,10 @@ export default function ProfilePage() {
       }
 
       setEmail(user.email ?? "");
+      setUserId(user.id);
+      const saved = (user.user_metadata?.steam_profile_id as string | undefined) ?? "";
+      setSteamProfileId(saved);
+      setSteamInput(saved);
 
       setLoading(false);
     }
@@ -134,6 +149,135 @@ export default function ProfilePage() {
 
     // Clear notice after 3 seconds
     setTimeout(() => setPasswordNotice(""), 3000);
+  }
+
+  async function saveSteamProfileId() {
+    if (!supabase) return;
+
+    setSteamError("");
+    setSteamNotice("");
+    setSteamSaving(true);
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      data: { steam_profile_id: steamInput.trim() },
+    });
+
+    setSteamSaving(false);
+
+    if (updateError) {
+      setSteamError(updateError.message || "Failed to save Steam profile ID.");
+      return;
+    }
+
+    setSteamProfileId(steamInput.trim());
+    setSteamNotice("Steam profile ID saved.");
+    setTimeout(() => setSteamNotice(""), 3000);
+  }
+
+  async function importSteamWishlist() {
+    if (!supabase || !steamProfileId || !userId) return;
+
+    setSteamError("");
+    setSteamNotice("");
+    setSteamProgress(null);
+    setSteamLoading(true);
+
+    try {
+      // Step 1: fetch wishlist appids
+      const res = await fetch(
+        `/api/import-steam-wishlist?profile=${encodeURIComponent(steamProfileId)}`,
+      );
+      const payload = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setSteamError(payload.error ?? "Could not fetch wishlist.");
+        return;
+      }
+
+      const { appids } = payload as { appids: string[] };
+
+      // Step 2: filter to new games only
+      const currentGames = await loadUserGames(supabase, userId);
+      const existingAppIds = new Set(currentGames.map((g) => g.appid));
+      const newAppIds = appids.filter((id) => !existingAppIds.has(id));
+
+      if (newAppIds.length === 0) {
+        setSteamNotice(
+          `All ${appids.length} game${appids.length !== 1 ? "s" : ""} from your wishlist are already tracked.`,
+        );
+        return;
+      }
+
+      // Step 3: fetch game details for each new appid with progress
+      setSteamProgress({ done: 0, total: newAppIds.length });
+      const newGames: Game[] = [];
+
+      const CONCURRENCY = 5;
+      for (let i = 0; i < newAppIds.length; i += CONCURRENCY) {
+        const batch = newAppIds.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(
+          batch.map((appid) =>
+            fetch(`/api/game-details?appid=${appid}`)
+              .then((r) => (r.ok ? r.json() : null))
+              .catch(() => null),
+          ),
+        );
+        for (const detail of results) {
+          if (detail?.appid && detail?.name) {
+            newGames.push({
+              appid: detail.appid,
+              name: detail.name,
+              img:
+                detail.img ??
+                `https://cdn.cloudflare.steamstatic.com/steam/apps/${detail.appid}/header.jpg`,
+              prices: {},
+              addedAt: Date.now(),
+            });
+          }
+        }
+        setSteamProgress({
+          done: Math.min(i + CONCURRENCY, newAppIds.length),
+          total: newAppIds.length,
+        });
+      }
+
+      if (newGames.length === 0) {
+        setSteamError("Could not fetch details for any games. Try again later.");
+        return;
+      }
+
+      // Step 4: save to Supabase and localStorage
+      const startOrder = currentGames.length;
+      const gameRows = newGames.map((g) => ({
+        appid: g.appid,
+        name: g.name,
+        img: g.img,
+        prices: g.prices,
+        last_fetched: null,
+        updated_at: new Date().toISOString(),
+      }));
+      const linkRows = newGames.map((g, i) => ({
+        user_id: userId,
+        appid: g.appid,
+        added_at: g.addedAt,
+        sort_order: startOrder + i,
+      }));
+
+      await supabase
+        .from("games")
+        .upsert(gameRows, { onConflict: "appid", ignoreDuplicates: true });
+      await supabase
+        .from("user_games")
+        .upsert(linkRows, { onConflict: "user_id,appid", ignoreDuplicates: true });
+
+      saveGames([...currentGames, ...newGames]);
+
+      sessionStorage.setItem("triggerRefreshAll", "1");
+      router.push("/");
+    } finally {
+      setSteamLoading(false);
+      setSteamProgress(null);
+    }
   }
 
   return (
@@ -226,6 +370,74 @@ export default function ProfilePage() {
               {passwordLoading ? "Updating..." : "Update password"}
             </button>
           </form>
+        )}
+      </section>
+
+      <section className="mb-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <h2 className="mb-1 font-medium text-sm">Steam Wishlist</h2>
+        <p className="mb-4 text-gray-500 text-sm">
+          Add your Steam64 ID to import games from your public wishlist. You can find it in your
+          Steam profile URL:{" "}
+          <span className="font-mono text-xs">
+            store.steampowered.com/wishlist/profiles/
+            <span className="text-blue-600 dark:text-blue-400">YOUR_ID</span>/
+          </span>
+        </p>
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={steamInput}
+            onChange={(e) => setSteamInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && saveSteamProfileId()}
+            placeholder="e.g. 76561198007529223"
+            disabled={steamSaving || steamLoading || loading}
+            className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
+          />
+          <button
+            type="button"
+            onClick={saveSteamProfileId}
+            disabled={
+              steamSaving ||
+              steamLoading ||
+              loading ||
+              !steamInput.trim() ||
+              steamInput.trim() === steamProfileId
+            }
+            className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+          >
+            {steamSaving ? "Saving..." : "Save"}
+          </button>
+        </div>
+
+        {steamProfileId && (
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={importSteamWishlist}
+              disabled={steamLoading || steamSaving || loading}
+              className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {steamProgress
+                ? `Fetching games... ${steamProgress.done}/${steamProgress.total}`
+                : steamLoading
+                  ? "Importing..."
+                  : "Import wishlist"}
+            </button>
+            <a
+              href={`https://steamcommunity.com/profiles/${steamProfileId}/edit/settings`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+            >
+              Steam settings
+            </a>
+          </div>
+        )}
+
+        {steamError && <p className="mt-3 text-red-500 text-sm">{steamError}</p>}
+        {steamNotice && (
+          <p className="mt-3 text-green-600 text-sm dark:text-green-400">{steamNotice}</p>
         )}
       </section>
 

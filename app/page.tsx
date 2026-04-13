@@ -57,6 +57,7 @@ export default function HomePage() {
   // Keep userId in a ref so callbacks always have the latest value without
   // needing it as a dependency.
   const userIdRef = useRef<string | null>(null);
+  const refreshAllRef = useRef<() => void>(() => {});
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [games, setGames] = useState<Game[]>([]);
   const [activeStores, setActiveStores] = useState<Set<string>>(new Set(STORES.map((s) => s.id)));
@@ -293,6 +294,19 @@ export default function HomePage() {
       setStatus("");
     }, 2500);
   }
+
+  // Keep the ref pointing at the latest refreshAll so the auto-refresh effect
+  // below can call it without a stale closure.
+  refreshAllRef.current = refreshAll;
+
+  // After hydration, check if a wishlist import requested an automatic refresh.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (sessionStorage.getItem("triggerRefreshAll") === "1") {
+      sessionStorage.removeItem("triggerRefreshAll");
+      refreshAllRef.current();
+    }
+  }, [hydrated]);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
