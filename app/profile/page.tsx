@@ -12,6 +12,17 @@ import {
 import { loadUserGames } from "@/lib/supabase/storage";
 import type { Game } from "@/lib/types";
 
+// Accept full wishlist/profile URLs and extract just the identifier:
+// https://store.steampowered.com/wishlist/profiles/<steamid>/
+// https://store.steampowered.com/wishlist/id/<vanityname>/
+// https://steamcommunity.com/profiles/<steamid>/
+// https://steamcommunity.com/id/<vanityname>/
+function parseSteamInput(raw: string): string {
+  const urlMatch = raw.match(/(?:wishlist\/|community\.com\/)(?:profiles|id)\/([^/?#\s]+)/i);
+  if (urlMatch) return urlMatch[1];
+  return raw.trim();
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = useSupabaseBrowserClient();
@@ -31,23 +42,15 @@ export default function ProfilePage() {
   });
   const [steamProfileId, setSteamProfileId] = useState("");
   const [steamInput, setSteamInput] = useState("");
-
-  function parseSteamInput(raw: string): string {
-    // Accept full wishlist/profile URLs and extract just the identifier:
-    // https://store.steampowered.com/wishlist/profiles/<steamid>/
-    // https://store.steampowered.com/wishlist/id/<vanityname>/
-    // https://steamcommunity.com/profiles/<steamid>/
-    // https://steamcommunity.com/id/<vanityname>/
-    const urlMatch = raw.match(/(?:wishlist\/|community\.com\/)(?:profiles|id)\/([^/?#\s]+)/i);
-    if (urlMatch) return urlMatch[1];
-    return raw.trim();
-  }
   const [steamSaving, setSteamSaving] = useState(false);
   const [steamLoading, setSteamLoading] = useState(false);
   const [steamProgress, setSteamProgress] = useState<{ done: number; total: number } | null>(null);
   const [steamError, setSteamError] = useState("");
   const [steamNotice, setSteamNotice] = useState("");
   const displayedError = error || (!supabase ? MISSING_SUPABASE_ENV_ERROR : "");
+  const steamSettingsUrl = /^\d+$/.test(steamProfileId)
+    ? `https://steamcommunity.com/profiles/${steamProfileId}/edit/settings`
+    : `https://steamcommunity.com/id/${steamProfileId}/edit/settings`;
 
   useEffect(() => {
     let active = true;
@@ -449,11 +452,7 @@ export default function ProfilePage() {
                   : "Import wishlist"}
             </button>
             <a
-              href={
-                /^\d+$/.test(steamProfileId)
-                  ? `https://steamcommunity.com/profiles/${steamProfileId}/edit/settings`
-                  : `https://steamcommunity.com/id/${steamProfileId}/edit/settings`
-              }
+              href={steamSettingsUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
