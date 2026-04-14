@@ -263,18 +263,33 @@ export default function HomePage() {
 
   async function refreshAll() {
     if (!games.length) return;
-    setProgress(0);
-    setStatus(`Refreshing all ${games.length} games…`);
-    let completed = 0;
-    const total = games.length;
 
-    // Mark all as refreshing and clear prices upfront
-    const allKeys = games.map(gameKey);
-    setRefreshingKeys(new Set(allKeys));
-    setGames((prev) => prev.map((g) => ({ ...g, prices: {} })));
+    const ONE_HOUR = 60 * 60 * 1000;
+    const stale = games.filter((g) => !g.lastFetched || Date.now() - g.lastFetched > ONE_HOUR);
+
+    if (stale.length === 0) {
+      setStatus("All prices are up to date.");
+      setTimeout(() => setStatus(""), 3000);
+      return;
+    }
+
+    const total = stale.length;
+    const skipped = games.length - total;
+    setProgress(0);
+    setStatus(
+      skipped > 0
+        ? `Refreshing ${total} game${total !== 1 ? "s" : ""} (${skipped} up to date)…`
+        : `Refreshing all ${total} games…`,
+    );
+    let completed = 0;
+
+    // Mark only stale games as refreshing and clear their prices
+    const staleKeys = new Set(stale.map(gameKey));
+    setRefreshingKeys(new Set(staleKeys));
+    setGames((prev) => prev.map((g) => (staleKeys.has(gameKey(g)) ? { ...g, prices: {} } : g)));
 
     await Promise.all(
-      games.map(async (game) => {
+      stale.map(async (game) => {
         const key = gameKey(game);
         await fetchPrices(game).catch(() => {});
         setRefreshingKeys((prev) => {
@@ -288,7 +303,7 @@ export default function HomePage() {
     );
 
     setProgress(100);
-    setStatus("All prices updated.");
+    setStatus("Prices updated.");
     setTimeout(() => {
       setProgress(null);
       setStatus("");
