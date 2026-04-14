@@ -59,7 +59,20 @@ export default function GameCard({
       <div className="flex flex-1 flex-col gap-2 p-3">
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="min-w-0 flex-1 font-medium text-sm leading-tight">{game.name}</h3>
+          <h3 className="min-w-0 flex-1 font-medium text-sm leading-tight">
+            {game.appid ? (
+              <a
+                href={`https://store.steampowered.com/app/${game.appid}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                {game.name}
+              </a>
+            ) : (
+              game.name
+            )}
+          </h3>
           <div className="flex flex-shrink-0 gap-1">
             {game.appid && (
               <Link
