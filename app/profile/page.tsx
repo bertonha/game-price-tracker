@@ -31,6 +31,17 @@ export default function ProfilePage() {
   });
   const [steamProfileId, setSteamProfileId] = useState("");
   const [steamInput, setSteamInput] = useState("");
+
+  function parseSteamInput(raw: string): string {
+    // Accept full wishlist/profile URLs and extract just the identifier:
+    // https://store.steampowered.com/wishlist/profiles/<steamid>/
+    // https://store.steampowered.com/wishlist/id/<vanityname>/
+    // https://steamcommunity.com/profiles/<steamid>/
+    // https://steamcommunity.com/id/<vanityname>/
+    const urlMatch = raw.match(/(?:wishlist\/|community\.com\/)(?:profiles|id)\/([^/?#\s]+)/i);
+    if (urlMatch) return urlMatch[1];
+    return raw.trim();
+  }
   const [steamSaving, setSteamSaving] = useState(false);
   const [steamLoading, setSteamLoading] = useState(false);
   const [steamProgress, setSteamProgress] = useState<{ done: number; total: number } | null>(null);
@@ -154,12 +165,19 @@ export default function ProfilePage() {
   async function saveSteamProfileId() {
     if (!supabase) return;
 
+    const parsed = parseSteamInput(steamInput);
+
+    if (!parsed || !/^[\w-]+$/.test(parsed)) {
+      setSteamError("Invalid Steam ID or URL. Paste your wishlist URL or Steam profile ID.");
+      return;
+    }
+
     setSteamError("");
     setSteamNotice("");
     setSteamSaving(true);
 
     const { error: updateError } = await supabase.auth.updateUser({
-      data: { steam_profile_id: steamInput.trim() },
+      data: { steam_profile_id: parsed },
     });
 
     setSteamSaving(false);
@@ -169,8 +187,9 @@ export default function ProfilePage() {
       return;
     }
 
-    setSteamProfileId(steamInput.trim());
-    setSteamNotice("Steam profile ID saved.");
+    setSteamProfileId(parsed);
+    setSteamInput(parsed);
+    setSteamNotice("Steam profile saved.");
     setTimeout(() => setSteamNotice(""), 3000);
   }
 
@@ -376,12 +395,17 @@ export default function ProfilePage() {
       <section className="mb-5 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
         <h2 className="mb-1 font-medium text-sm">Steam Wishlist</h2>
         <p className="mb-4 text-gray-500 text-sm">
-          Add your Steam64 ID to import games from your public wishlist. You can find it in your
-          Steam profile URL:{" "}
-          <span className="font-mono text-xs">
-            store.steampowered.com/wishlist/profiles/
-            <span className="text-blue-600 dark:text-blue-400">YOUR_ID</span>/
-          </span>
+          Visit{" "}
+          <a
+            href="https://steamcommunity.com/my/wishlist/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 underline dark:text-blue-400"
+          >
+            steamcommunity.com/my/wishlist/
+          </a>{" "}
+          — Steam will redirect you to your wishlist URL. Paste that URL (or just your Steam ID or
+          username) here. Your wishlist must be set to public.
         </p>
 
         <div className="flex gap-2">
@@ -390,7 +414,7 @@ export default function ProfilePage() {
             value={steamInput}
             onChange={(e) => setSteamInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && saveSteamProfileId()}
-            placeholder="e.g. 76561198007529223"
+            placeholder="e.g. 76561198007529223 or jaysonsantos"
             disabled={steamSaving || steamLoading || loading}
             className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
           />
@@ -402,7 +426,7 @@ export default function ProfilePage() {
               steamLoading ||
               loading ||
               !steamInput.trim() ||
-              steamInput.trim() === steamProfileId
+              parseSteamInput(steamInput) === steamProfileId
             }
             className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
           >
@@ -425,7 +449,11 @@ export default function ProfilePage() {
                   : "Import wishlist"}
             </button>
             <a
-              href={`https://steamcommunity.com/profiles/${steamProfileId}/edit/settings`}
+              href={
+                /^\d+$/.test(steamProfileId)
+                  ? `https://steamcommunity.com/profiles/${steamProfileId}/edit/settings`
+                  : `https://steamcommunity.com/id/${steamProfileId}/edit/settings`
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"

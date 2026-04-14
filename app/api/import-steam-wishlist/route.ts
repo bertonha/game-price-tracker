@@ -1,10 +1,41 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
-  const steamId = request.nextUrl.searchParams.get("profile")?.trim();
+async function resolveToSteam64Id(profile: string): Promise<string | null> {
+  if (/^\d+$/.test(profile)) {
+    return profile;
+  }
+  // Treat as vanity URL — resolve via Steam community profile XML (no API key required)
+  let res: Response;
+  try {
+    res = await fetch(`https://steamcommunity.com/id/${encodeURIComponent(profile)}?xml=1`, {
+      cache: "no-store",
+    });
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+  const xml = await res.text();
+  const match = xml.match(/<steamID64>(\d+)<\/steamID64>/);
+  return match ? match[1] : null;
+}
 
-  if (!steamId || !/^\d+$/.test(steamId)) {
-    return NextResponse.json({ error: "Invalid Steam64 ID." }, { status: 400 });
+export async function GET(request: NextRequest) {
+  const profile = request.nextUrl.searchParams.get("profile")?.trim();
+
+  if (!profile || !/^[\w-]+$/.test(profile)) {
+    return NextResponse.json(
+      { error: "Invalid Steam profile ID or vanity name." },
+      { status: 400 },
+    );
+  }
+
+  const steamId = await resolveToSteam64Id(profile);
+
+  if (!steamId) {
+    return NextResponse.json(
+      { error: "Could not resolve Steam profile. Check that the profile is public." },
+      { status: 400 },
+    );
   }
 
   let res: Response;
