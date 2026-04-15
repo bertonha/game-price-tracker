@@ -81,6 +81,14 @@ export default function SignupPage() {
         </>
       }
     >
+      <AuthGoogleButton onClick={handleGoogleSignUp} disabled={loading} />
+
+      <div className="my-4 flex items-center gap-3 text-gray-400 text-xs">
+        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+        <span>OR</span>
+        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+      </div>
+
       <form className="space-y-4" onSubmit={handleSignup}>
         <label className="block">
           <span className="text-gray-600 text-sm dark:text-gray-300">Email</span>
@@ -116,14 +124,6 @@ export default function SignupPage() {
           {loading ? "Creating account..." : "Create account"}
         </button>
       </form>
-
-      <div className="my-4 flex items-center gap-3 text-gray-400 text-xs">
-        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-        <span>OR</span>
-        <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-      </div>
-
-      <AuthGoogleButton onClick={handleGoogleSignUp} disabled={loading} />
     </AuthPageFrame>
   );
 }
