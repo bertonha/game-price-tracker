@@ -430,7 +430,7 @@ export default function HomePage() {
           </p>
           <Link
             href="/auth/signup"
-            className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-blue-700"
+            className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-white text-xs transition-colors hover:bg-blue-700"
           >
             Sign up
           </Link>
