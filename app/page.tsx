@@ -60,6 +60,7 @@ export default function HomePage() {
   const refreshAllRef = useRef<() => void>(() => {});
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [games, setGames] = useState<Game[]>([]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeStores, setActiveStores] = useState<Set<string>>(new Set(STORES.map((s) => s.id)));
   const [refreshingKeys, setRefreshingKeys] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState("");
@@ -75,7 +76,7 @@ export default function HomePage() {
       if (!supabase) {
         setGames(loadGames());
         setHydrated(true);
-        return;
+        return; // no auth configured — treat as guest
       }
 
       const {
@@ -85,12 +86,13 @@ export default function HomePage() {
       if (!active) return;
 
       if (!user) {
-        // Middleware should redirect, but guard anyway.
+        setGames(loadGames());
         setHydrated(true);
         return;
       }
 
       userIdRef.current = user.id;
+      setIsLoggedIn(true);
 
       const remote = await loadUserGames(supabase, user.id);
 
@@ -378,26 +380,54 @@ export default function HomePage() {
         <div className="mb-1 flex items-center justify-between gap-4">
           <h1 className="font-medium text-2xl">Game Price Tracker</h1>
           <div className="flex items-center gap-2">
-            <Link
-              href="/profile"
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
-            >
-              Profile
-            </Link>
-            <button
-              type="button"
-              onClick={signOut}
-              disabled={!supabase}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
-            >
-              Sign out
-            </button>
+            {isLoggedIn ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+                >
+                  Profile
+                </Link>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/auth/login"
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs transition-colors hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800"
+              >
+                Sign in
+              </Link>
+            )}
           </div>
         </div>
         <p className="text-gray-500 text-sm">
           Compare prices across Steam BR, Nuuvem &amp; Instant Gaming
         </p>
       </div>
+
+      {/* Guest sync banner */}
+      {!isLoggedIn && (
+        <div className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900/50 dark:bg-blue-950/30">
+          <p className="text-blue-800 text-sm dark:text-blue-300">
+            Want your games synced across devices?{" "}
+            <Link href="/auth/signup" className="font-medium underline underline-offset-2">
+              Sign up for free
+            </Link>
+          </p>
+          <Link
+            href="/auth/signup"
+            className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-blue-700"
+          >
+            Sign up
+          </Link>
+        </div>
+      )}
 
       {/* Search */}
       <div className="mb-3">

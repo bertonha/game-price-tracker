@@ -6,6 +6,7 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_K
 
 function isPublicPath(pathname: string): boolean {
   return (
+    pathname === "/" ||
     pathname === "/auth/login" ||
     pathname === "/auth/signup" ||
     pathname.startsWith("/auth/callback") ||
