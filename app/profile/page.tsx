@@ -293,9 +293,6 @@ export default function ProfilePage() {
         .upsert(linkRows, { onConflict: "user_id,appid", ignoreDuplicates: true });
 
       saveGames([...currentGames, ...newGames]);
-
-      sessionStorage.setItem("triggerRefreshAll", "1");
-      router.push("/");
     } finally {
       setSteamLoading(false);
       setSteamProgress(null);

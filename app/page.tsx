@@ -316,14 +316,22 @@ export default function HomePage() {
   // below can call it without a stale closure.
   refreshAllRef.current = refreshAll;
 
-  // After hydration, check if a wishlist import requested an automatic refresh.
+  // After hydration, trigger a refresh for any stale prices.
   useEffect(() => {
     if (!hydrated) return;
-    if (sessionStorage.getItem("triggerRefreshAll") === "1") {
-      sessionStorage.removeItem("triggerRefreshAll");
-      refreshAllRef.current();
-    }
+    refreshAllRef.current();
   }, [hydrated]);
+
+  // When the user returns to the tab, refresh stale prices.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshAllRef.current();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
