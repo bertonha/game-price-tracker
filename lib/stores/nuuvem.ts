@@ -3,6 +3,20 @@ import { stripGamePrefix } from "@/lib/utils";
 
 const NUUVEM_EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
 
+/** Minimum Jaccard score required to accept an autocomplete result.
+ *  A score of 0.5 lets "Dwarf Journey" match the query "Journey"; 0.6 blocks it. */
+const MIN_AUTOCOMPLETE_SCORE = 0.6;
+
+/** Convert a game name to a Nuuvem URL slug. */
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[™®©]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
 const HEADERS: Record<string, string> = {
   "accept-language": "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7",
   "user-agent":
@@ -106,7 +120,7 @@ async function autocomplete(name: string): Promise<AutocompleteResult | null> {
       }
     }
 
-    return bestScore > 0 && bestUrl ? { bestUrl, imageIdToUrl } : null;
+    return bestScore >= MIN_AUTOCOMPLETE_SCORE && bestUrl ? { bestUrl, imageIdToUrl } : null;
   } catch {
     return null;
   }
@@ -195,5 +209,11 @@ export async function fetchNuuvem(name: string): Promise<StorePrice> {
     const result = await fetchNuuvemByUrl(ac.bestUrl, name, ac.imageIdToUrl);
     if (result) return result;
   }
+
+  // Fallback: try a direct slug-based URL when autocomplete finds no good match.
+  const directUrl = `https://www.nuuvem.com/br-pt/item/${toSlug(name)}`;
+  const direct = await fetchNuuvemByUrl(directUrl, name, new Map());
+  if (direct) return direct;
+
   return { price: "N/A", url: null };
 }
