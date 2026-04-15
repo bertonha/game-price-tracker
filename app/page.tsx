@@ -57,7 +57,7 @@ export default function HomePage() {
   // Keep userId in a ref so callbacks always have the latest value without
   // needing it as a dependency.
   const userIdRef = useRef<string | null>(null);
-  const refreshAllRef = useRef<() => void>(() => {});
+  const refreshAllRef = useRef<(force?: boolean) => void>(() => {});
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [games, setGames] = useState<Game[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -263,11 +263,13 @@ export default function HomePage() {
     }
   }
 
-  async function refreshAll() {
+  async function refreshAll(force = false) {
     if (!games.length) return;
 
     const ONE_HOUR = 60 * 60 * 1000;
-    const stale = games.filter((g) => !g.lastFetched || Date.now() - g.lastFetched > ONE_HOUR);
+    const stale = force
+      ? games
+      : games.filter((g) => !g.lastFetched || Date.now() - g.lastFetched > ONE_HOUR);
 
     if (stale.length === 0) {
       setStatus("All prices are up to date.");
@@ -317,9 +319,17 @@ export default function HomePage() {
   refreshAllRef.current = refreshAll;
 
   // After hydration, trigger a refresh for any stale prices.
+  // If ?refresh=1 is present in the URL, force-refresh all games ignoring the 1-hour cache.
   useEffect(() => {
     if (!hydrated) return;
-    refreshAllRef.current();
+    const params = new URLSearchParams(window.location.search);
+    const force = params.get("refresh") === "1";
+    if (force) {
+      params.delete("refresh");
+      const newUrl = window.location.pathname + (params.size ? `?${params}` : "");
+      window.history.replaceState(null, "", newUrl);
+    }
+    refreshAllRef.current(force);
   }, [hydrated]);
 
   // When the user returns to the tab, refresh stale prices.
@@ -454,7 +464,7 @@ export default function HomePage() {
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <button
           type="button"
-          onClick={refreshAll}
+          onClick={() => refreshAll()}
           disabled={!games.length || refreshingKeys.size > 0}
           className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm transition-colors hover:bg-gray-100 disabled:opacity-40 dark:border-gray-600 dark:hover:bg-gray-800"
         >
