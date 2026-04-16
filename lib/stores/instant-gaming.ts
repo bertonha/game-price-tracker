@@ -1,3 +1,4 @@
+import { matchScore, STORE_EXCLUDE } from "@/lib/stores/match";
 import type { StorePrice } from "@/lib/types";
 
 const rateCache = new Map<string, Promise<number>>();
@@ -29,9 +30,6 @@ const ALGOLIA_URL =
 const FILTERS =
   '(country_whitelist:"BR" OR country_whitelist:"worldwide" OR country_whitelist:"WW") AND (NOT country_blacklist:"BR") AND (type:"Steam")';
 
-const EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
-const OLD_EDITION_QUALIFIERS = /\b(goty|classic|legacy|game of the year)\b/i;
-
 interface AlgoliaHit {
   prod_id?: number;
   en_name?: string;
@@ -44,26 +42,6 @@ interface AlgoliaHit {
 
 interface AlgoliaResponse {
   hits: AlgoliaHit[];
-}
-
-function matchScore(query: string, title: string): number {
-  const normalize = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[™®©]/g, "")
-      .replace(/[^a-z0-9\s]/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .split(" ")
-      .filter(Boolean);
-  const qWords = new Set(normalize(query));
-  const tWords = new Set(normalize(title));
-  for (const w of qWords) if (!tWords.has(w)) return 0;
-  let score = qWords.size / new Set([...qWords, ...tWords]).size;
-  if (OLD_EDITION_QUALIFIERS.test(title) && !OLD_EDITION_QUALIFIERS.test(query)) {
-    score *= 0.8;
-  }
-  return score;
 }
 
 function formatPrice(price: number): string {
@@ -116,7 +94,7 @@ export async function fetchInstantGaming(name: string): Promise<StorePrice> {
     for (const hit of data.hits) {
       const title = hit.en_name ?? "";
       if (!title) continue;
-      if (hit.is_dlc === 1 || EXCLUDE.test(title)) continue;
+      if (hit.is_dlc === 1 || STORE_EXCLUDE.test(title)) continue;
 
       // currency_prices values are in retail_currency — convert to BRL
       const priceInRetailCurrency = hit.currency_prices?.BRL;
