@@ -1,4 +1,4 @@
-import { matchScore, STORE_EXCLUDE } from "@/lib/stores/match";
+import { MIN_MATCH_SCORE, matchScore, STORE_EXCLUDE } from "@/lib/stores/match";
 import type { StorePrice } from "@/lib/types";
 
 const rateCache = new Map<string, Promise<number>>();
@@ -105,16 +105,13 @@ export async function fetchInstantGaming(name: string): Promise<StorePrice> {
       if (!seoName || !hit.prod_id) continue;
       const url = `https://www.instant-gaming.com/br/${hit.prod_id}-comprar-${seoName}/?currency=BRL`;
 
-      // Match against the base game name only (strip edition suffix for scoring)
-      const baseTitle = hit.edition ? title.replace(hit.edition, "").trim() : title;
-      const score = matchScore(name, baseTitle);
+      const score = matchScore(name, title);
       if (score <= 0) continue;
 
       const priceStr = formatPrice(brlPrice);
 
       if (!hit.edition) {
-        // Base game
-        if (score > bestBaseScore) {
+        if (score >= MIN_MATCH_SCORE && score > bestBaseScore) {
           bestBaseScore = score;
           basePrice = priceStr;
           baseUrl = url;

@@ -1,10 +1,14 @@
 /** Regex that matches DLC/add-on/season pass titles — used to exclude them from price results. */
 export const STORE_EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
 
+/** Minimum matchScore required to accept a result.
+ *  A score of 0.5 lets "Dwarf Journey" match the query "Journey"; 0.6 blocks it. */
+export const MIN_MATCH_SCORE = 0.6;
+
 /** Words that signal an older/special edition of a game.
  *  When present in the title but absent from the query, the result is
  *  down-ranked so a newer or more precise match is preferred instead. */
-const OLD_EDITION_QUALIFIERS = /\b(goty|classic|legacy|game of the year)\b/i;
+const OLD_EDITION_QUALIFIERS = /\b(goty|classic|legacy|game of the year|anniversary)\b/i;
 
 /** Score how well a candidate title matches the query name.
  *  Returns 0 if any query word is missing from the title (strict subset check),

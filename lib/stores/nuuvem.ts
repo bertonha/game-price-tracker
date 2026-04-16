@@ -1,10 +1,6 @@
-import { matchScore, STORE_EXCLUDE } from "@/lib/stores/match";
+import { MIN_MATCH_SCORE, matchScore, STORE_EXCLUDE } from "@/lib/stores/match";
 import type { Edition, StorePrice } from "@/lib/types";
 import { stripGamePrefix } from "@/lib/utils";
-
-/** Minimum Jaccard score required to accept an autocomplete result.
- *  A score of 0.5 lets "Dwarf Journey" match the query "Journey"; 0.6 blocks it. */
-const MIN_AUTOCOMPLETE_SCORE = 0.6;
 
 /** Convert a game name to a Nuuvem URL slug. */
 function toSlug(name: string): string {
@@ -89,7 +85,7 @@ async function autocomplete(name: string): Promise<AutocompleteResult | null> {
       }
     }
 
-    return bestScore >= MIN_AUTOCOMPLETE_SCORE && bestUrl ? { bestUrl, imageIdToUrl } : null;
+    return bestScore >= MIN_MATCH_SCORE && bestUrl ? { bestUrl, imageIdToUrl } : null;
   } catch {
     return null;
   }
