@@ -25,14 +25,8 @@ import {
   upsertAllUserGames,
   upsertUserGame,
 } from "@/lib/supabase/storage";
-import {
-  type Game,
-  type GamePrices,
-  STORES,
-  type SteamSuggestion,
-  type StorePrice,
-} from "@/lib/types";
-import { gameKey } from "@/lib/utils";
+import type { Game, GamePrices, SteamSuggestion, StorePrice } from "@/lib/types";
+import { bestDeal, gameKey } from "@/lib/utils";
 
 function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
   const key = gameKey(props.game);
@@ -61,7 +55,7 @@ export default function HomePage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [games, setGames] = useState<Game[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [activeStores, setActiveStores] = useState<Set<string>>(new Set(STORES.map((s) => s.id)));
+  const [activeStores, setActiveStores] = useState<Set<string>>(new Set());
   const [refreshingKeys, setRefreshingKeys] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState("");
   const [progress, setProgress] = useState<number | null>(null);
@@ -391,6 +385,11 @@ export default function HomePage() {
 
   if (!hydrated) return null;
 
+  const filteredGames =
+    activeStores.size === 0
+      ? games
+      : games.filter((g) => activeStores.has(bestDeal(g.prices) ?? ""));
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
       {/* Header */}
@@ -480,7 +479,9 @@ export default function HomePage() {
         </button>
         {games.length > 0 && (
           <span className="ml-auto text-gray-400 text-xs">
-            {games.length} game{games.length !== 1 ? "s" : ""} saved
+            {activeStores.size > 0
+              ? `${filteredGames.length} of ${games.length} game${games.length !== 1 ? "s" : ""}`
+              : `${games.length} game${games.length !== 1 ? "s" : ""} saved`}
           </span>
         )}
       </div>
@@ -506,13 +507,12 @@ export default function HomePage() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={games.map(gameKey)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {games.map((game, idx) => {
+              {filteredGames.map((game, idx) => {
                 const key = gameKey(game);
                 return (
                   <SortableGameCard
                     key={key}
                     game={game}
-                    activeStores={activeStores}
                     onRemove={removeGame}
                     onRefresh={refreshOne}
                     refreshing={refreshingKeys.has(key)}

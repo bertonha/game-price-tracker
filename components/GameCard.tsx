@@ -9,7 +9,6 @@ import StorePriceList from "./StorePriceList";
 
 interface Props {
   game: Game;
-  activeStores: Set<string>;
   onRemove: (key: string) => void;
   onRefresh: (key: string) => void;
   refreshing?: boolean;
@@ -19,7 +18,6 @@ interface Props {
 
 export default function GameCard({
   game,
-  activeStores,
   onRemove,
   onRefresh,
   refreshing,
@@ -29,7 +27,7 @@ export default function GameCard({
   const key = gameKey(game);
   const best = bestDeal(game.prices);
 
-  const visibleStores = STORES.filter((s) => activeStores.has(s.id));
+  const visibleStores = STORES;
 
   return (
     <article
