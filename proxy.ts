@@ -9,6 +9,8 @@ function isPublicPath(pathname: string): boolean {
     pathname === "/" ||
     pathname === "/auth/login" ||
     pathname === "/auth/signup" ||
+    pathname === "/auth/forgot-password" ||
+    pathname === "/auth/reset-password" ||
     pathname.startsWith("/auth/callback") ||
     pathname.startsWith("/share/")
   );
