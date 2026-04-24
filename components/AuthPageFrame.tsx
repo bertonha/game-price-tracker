@@ -4,7 +4,7 @@ interface AuthPageFrameProps {
   title: string;
   description: string;
   children: ReactNode;
-  footer: ReactNode;
+  footer?: ReactNode;
 }
 
 export default function AuthPageFrame({
@@ -19,7 +19,7 @@ export default function AuthPageFrame({
         <h1 className="mb-1 font-semibold text-2xl">{title}</h1>
         <p className="mb-6 text-gray-500 text-sm">{description}</p>
         {children}
-        <div className="mt-6 text-gray-500 text-sm">{footer}</div>
+        {footer && <div className="mt-6 text-gray-500 text-sm">{footer}</div>}
       </div>
     </main>
   );

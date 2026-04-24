@@ -134,7 +134,15 @@ function LoginPageContent() {
         </label>
 
         <label className="block">
-          <span className="text-gray-600 text-sm dark:text-gray-300">Password</span>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 text-sm dark:text-gray-300">Password</span>
+            <Link
+              href="/auth/forgot-password"
+              className="text-gray-500 text-xs underline hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <input
             type="password"
             value={password}
