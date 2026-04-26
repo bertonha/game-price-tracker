@@ -115,6 +115,24 @@ export default function HomePage() {
     };
   }, [supabase]);
 
+  // Redirect to login and clean up local state when the session expires or is
+  // invalidated externally (e.g. refresh token rotation failure).
+  useEffect(() => {
+    if (!supabase) return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT" && userIdRef.current) {
+        clearGames();
+        userIdRef.current = null;
+        setIsLoggedIn(false);
+        setGames([]);
+        router.replace("/auth/login");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase, router]);
+
   const persistGames = useCallback(
     (updated: Game[]) => {
       setGames(updated);

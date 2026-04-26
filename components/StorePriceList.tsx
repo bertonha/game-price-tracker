@@ -46,7 +46,10 @@ export default function StorePriceList({ prices, gameName, bestStore, stores = S
             </div>
             {/* Edition sub-rows — sorted by price ascending */}
             {info?.editions
-              ?.slice()
+              ?.filter(
+                (ed, i, arr) =>
+                  arr.findIndex((e) => e.name === ed.name && e.price === ed.price) === i,
+              )
               .sort((a, b) => {
                 const parse = (p: string | null) =>
                   p ? parseFloat(p.replace(/[^\d.]/g, "").replace(",", ".")) : Infinity;

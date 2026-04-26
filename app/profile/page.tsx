@@ -1,9 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { loadGames, saveGames } from "@/lib/storage";
+import { clearGames, loadGames, saveGames } from "@/lib/storage";
 import {
   MISSING_SUPABASE_ENV_ERROR,
   updatePassword,
@@ -91,6 +92,19 @@ export default function ProfilePage() {
       active = false;
     };
   }, [router, supabase]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT" && userId) {
+        clearGames();
+        router.replace("/auth/login");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase, router, userId]);
 
   async function deleteAccount() {
     if (!confirm("Are you sure? This will permanently delete your account.")) {
@@ -493,7 +507,7 @@ export default function ProfilePage() {
         {steamNotOnWishlist.length > 0 && (
           <div className="mt-4">
             <div className="mb-2 flex items-center justify-between">
-              <p className="font-medium text-sm text-gray-700 dark:text-gray-300">
+              <p className="font-medium text-gray-700 text-sm dark:text-gray-300">
                 {steamNotOnWishlist.length} game{steamNotOnWishlist.length !== 1 ? "s" : ""} not on
                 your wishlist
               </p>
@@ -512,7 +526,15 @@ export default function ProfilePage() {
                   key={game.appid}
                   className="flex items-center gap-3 rounded-lg border border-gray-200 p-2 dark:border-gray-700"
                 >
-                  <img src={game.img} alt={game.name} className="h-9 w-16 rounded object-cover" />
+                  <div className="relative h-9 w-16 shrink-0 overflow-hidden rounded">
+                    <Image
+                      src={game.img}
+                      alt={game.name}
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                    />
+                  </div>
                   <span className="flex-1 truncate text-sm">{game.name}</span>
                   <button
                     type="button"
