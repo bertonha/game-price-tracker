@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { saveGames } from "@/lib/storage";
+import { loadGames, saveGames } from "@/lib/storage";
 import {
   MISSING_SUPABASE_ENV_ERROR,
   updatePassword,
   useSupabaseBrowserClient,
 } from "@/lib/supabase/browser-auth";
-import { loadUserGames } from "@/lib/supabase/storage";
+import { deleteUserGame, loadUserGames } from "@/lib/supabase/storage";
 import type { Game } from "@/lib/types";
 
 // Accept full wishlist/profile URLs and extract just the identifier:
@@ -47,6 +47,9 @@ export default function ProfilePage() {
   const [steamProgress, setSteamProgress] = useState<{ done: number; total: number } | null>(null);
   const [steamError, setSteamError] = useState("");
   const [steamNotice, setSteamNotice] = useState("");
+  const [steamNotOnWishlist, setSteamNotOnWishlist] = useState<Game[]>([]);
+  const [deletingAppid, setDeletingAppid] = useState<string | null>(null);
+  const [deletingAll, setDeletingAll] = useState(false);
   const displayedError = error || (!supabase ? MISSING_SUPABASE_ENV_ERROR : "");
   const steamSettingsUrl = /^\d+$/.test(steamProfileId)
     ? `https://steamcommunity.com/profiles/${steamProfileId}/edit/settings`
@@ -202,6 +205,7 @@ export default function ProfilePage() {
     setSteamError("");
     setSteamNotice("");
     setSteamProgress(null);
+    setSteamNotOnWishlist([]);
     setSteamLoading(true);
 
     try {
@@ -220,8 +224,12 @@ export default function ProfilePage() {
 
       // Step 2: filter to new games only
       const currentGames = await loadUserGames(supabase, userId);
+      const wishlistSet = new Set(appids);
       const existingAppIds = new Set(currentGames.map((g) => g.appid));
       const newAppIds = appids.filter((id) => !existingAppIds.has(id));
+
+      const notOnWishlist = currentGames.filter((g) => !wishlistSet.has(g.appid));
+      setSteamNotOnWishlist(notOnWishlist);
 
       if (newAppIds.length === 0) {
         setSteamNotice(
@@ -297,6 +305,25 @@ export default function ProfilePage() {
       setSteamLoading(false);
       setSteamProgress(null);
     }
+  }
+
+  async function removeNotOnWishlistGame(appid: string) {
+    if (!supabase || !userId) return;
+    setDeletingAppid(appid);
+    await deleteUserGame(supabase, userId, appid);
+    setSteamNotOnWishlist((prev) => prev.filter((g) => g.appid !== appid));
+    saveGames(loadGames().filter((g) => g.appid !== appid));
+    setDeletingAppid(null);
+  }
+
+  async function removeAllNotOnWishlist() {
+    if (!supabase || !userId || !steamNotOnWishlist.length) return;
+    setDeletingAll(true);
+    await Promise.all(steamNotOnWishlist.map((g) => deleteUserGame(supabase, userId, g.appid)));
+    const removedSet = new Set(steamNotOnWishlist.map((g) => g.appid));
+    saveGames(loadGames().filter((g) => !removedSet.has(g.appid)));
+    setSteamNotOnWishlist([]);
+    setDeletingAll(false);
   }
 
   return (
@@ -461,6 +488,44 @@ export default function ProfilePage() {
         {steamError && <p className="mt-3 text-red-500 text-sm">{steamError}</p>}
         {steamNotice && (
           <p className="mt-3 text-green-600 text-sm dark:text-green-400">{steamNotice}</p>
+        )}
+
+        {steamNotOnWishlist.length > 0 && (
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="font-medium text-sm text-gray-700 dark:text-gray-300">
+                {steamNotOnWishlist.length} game{steamNotOnWishlist.length !== 1 ? "s" : ""} not on
+                your wishlist
+              </p>
+              <button
+                type="button"
+                onClick={removeAllNotOnWishlist}
+                disabled={deletingAll || deletingAppid !== null}
+                className="text-red-600 text-xs hover:underline disabled:opacity-50 dark:text-red-400"
+              >
+                {deletingAll ? "Removing..." : "Remove all"}
+              </button>
+            </div>
+            <ul className="space-y-2">
+              {steamNotOnWishlist.map((game) => (
+                <li
+                  key={game.appid}
+                  className="flex items-center gap-3 rounded-lg border border-gray-200 p-2 dark:border-gray-700"
+                >
+                  <img src={game.img} alt={game.name} className="h-9 w-16 rounded object-cover" />
+                  <span className="flex-1 truncate text-sm">{game.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeNotOnWishlistGame(game.appid)}
+                    disabled={deletingAppid === game.appid || deletingAll}
+                    className="shrink-0 rounded border border-red-300 px-2 py-1 text-red-600 text-xs hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                  >
+                    {deletingAppid === game.appid ? "..." : "Remove"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </section>
 
