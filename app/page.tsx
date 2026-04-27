@@ -60,6 +60,7 @@ export default function HomePage() {
   const [status, setStatus] = useState("");
   const [progress, setProgress] = useState<number | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [sortOrder, setSortOrder] = useState<"priority" | "cheapest" | "expensive">("priority");
 
   // On mount: resolve user, load games from Supabase.
   // If DB is empty and localStorage has games → auto-import once.
@@ -408,6 +409,30 @@ export default function HomePage() {
       ? games
       : games.filter((g) => activeStores.has(bestDeal(g.prices) ?? ""));
 
+  function minPrice(game: Game): number {
+    let min = Number.POSITIVE_INFINITY;
+    for (const info of Object.values(game.prices)) {
+      if (!info?.price || info.price === "N/A") continue;
+      const n = parseFloat(info.price.replace(/[^0-9.,]/g, "").replace(",", "."));
+      if (!Number.isNaN(n) && n < min) min = n;
+    }
+    return min;
+  }
+
+  const displayedGames =
+    sortOrder === "cheapest"
+      ? [...filteredGames].sort((a, b) => minPrice(a) - minPrice(b))
+      : sortOrder === "expensive"
+        ? [...filteredGames].sort((a, b) => {
+            const pa = minPrice(a);
+            const pb = minPrice(b);
+            if (pa === Number.POSITIVE_INFINITY && pb === Number.POSITIVE_INFINITY) return 0;
+            if (pa === Number.POSITIVE_INFINITY) return 1;
+            if (pb === Number.POSITIVE_INFINITY) return -1;
+            return pb - pa;
+          })
+        : filteredGames;
+
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
       {/* Header */}
@@ -495,6 +520,15 @@ export default function HomePage() {
         >
           Clear list
         </button>
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:hover:bg-gray-800"
+        >
+          <option value="priority">Sort: Priority</option>
+          <option value="cheapest">Sort: Cheapest first</option>
+          <option value="expensive">Sort: Most expensive first</option>
+        </select>
         {games.length > 0 && (
           <span className="ml-auto text-gray-400 text-xs">
             {activeStores.size > 0
@@ -522,10 +556,14 @@ export default function HomePage() {
           <p className="text-sm">No games added yet — search for a game above to get started.</p>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={sortOrder === "priority" ? handleDragEnd : undefined}
+        >
           <SortableContext items={games.map(gameKey)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredGames.map((game, idx) => {
+              {displayedGames.map((game, idx) => {
                 const key = gameKey(game);
                 return (
                   <SortableGameCard
