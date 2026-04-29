@@ -23,6 +23,7 @@ export interface Game {
   prices: Partial<GamePrices>;
   lastFetched?: number;
   addedAt: number;
+  isFavorite?: boolean;
 }
 
 export interface SteamSuggestion {

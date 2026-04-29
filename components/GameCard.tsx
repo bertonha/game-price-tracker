@@ -11,6 +11,8 @@ interface Props {
   game: Game;
   onRemove: (key: string) => void;
   onRefresh: (key: string) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: (appid: string) => void;
   refreshing?: boolean;
   prioritizeImage?: boolean;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
@@ -20,6 +22,8 @@ export default function GameCard({
   game,
   onRemove,
   onRefresh,
+  isFavorite,
+  onToggleFavorite,
   refreshing,
   prioritizeImage = false,
   dragHandleProps,
@@ -72,6 +76,24 @@ export default function GameCard({
             )}
           </h3>
           <div className="flex flex-shrink-0 gap-1">
+            {onToggleFavorite && game.appid && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleFavorite(game.appid);
+                }}
+                aria-label={`${isFavorite ? "Unstar" : "Star"} ${game.name}`}
+                title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+                className={`rounded p-1 text-xs transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-900/30 ${
+                  isFavorite
+                    ? "text-yellow-500 hover:text-yellow-600"
+                    : "text-gray-400 hover:text-yellow-500"
+                }`}
+              >
+                <span aria-hidden="true">{isFavorite ? "★" : "☆"}</span>
+              </button>
+            )}
             {game.appid && (
               <Link
                 href={`/share/${game.appid}`}
