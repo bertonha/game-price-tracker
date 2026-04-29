@@ -36,7 +36,7 @@ export default function GameCard({
   return (
     <article
       aria-label={game.name}
-      className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+      className="min-h-105 flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
     >
       {/* Header image — also the drag handle */}
       <div
@@ -57,8 +57,67 @@ export default function GameCard({
         )}
       </div>
 
+      <div className="flex flex-col pt-3 px-3 items-end">
+        <div className="flex flex-shrink-0 gap-2">
+          {onToggleFavorite && game.appid && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(game.appid);
+              }}
+              aria-label={`${isFavorite ? "Unstar" : "Star"} ${game.name}`}
+              title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              className={`rounded p-1 text-xs transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-900/30 ${
+                isFavorite
+                  ? "text-yellow-500 hover:text-yellow-600"
+                  : "text-gray-400 hover:text-yellow-500"
+              }`}
+            >
+              <span aria-hidden="true">{isFavorite ? "★" : "☆"}</span>
+            </button>
+          )}
+          {game.appid && (
+            <Link
+              href={`/share/${game.appid}`}
+              target="_blank"
+              aria-label={`Share ${game.name}`}
+              title="Share"
+              className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
+            >
+              <span aria-hidden="true">↗</span>
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={() => onRefresh(key)}
+            disabled={refreshing}
+            aria-label={`Refresh prices for ${game.name}`}
+            title="Refresh prices"
+            className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            {refreshing ? (
+              <span className="inline-block animate-spin" aria-hidden="true">
+                ↻
+              </span>
+            ) : (
+              <span aria-hidden="true">↻</span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => onRemove(key)}
+            aria-label={`Remove ${game.name}`}
+            title="Remove game"
+            className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+      </div>
+
       {/* Body */}
-      <div className="flex flex-1 flex-col gap-2 p-3">
+      <div className="flex flex-1 flex-col gap-2 p-3 pt-0 overflow-auto">
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 flex-1 font-medium text-sm leading-tight">
@@ -75,63 +134,9 @@ export default function GameCard({
               game.name
             )}
           </h3>
-          <div className="flex flex-shrink-0 gap-1">
-            {onToggleFavorite && game.appid && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleFavorite(game.appid);
-                }}
-                aria-label={`${isFavorite ? "Unstar" : "Star"} ${game.name}`}
-                title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                className={`rounded p-1 text-xs transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-900/30 ${
-                  isFavorite
-                    ? "text-yellow-500 hover:text-yellow-600"
-                    : "text-gray-400 hover:text-yellow-500"
-                }`}
-              >
-                <span aria-hidden="true">{isFavorite ? "★" : "☆"}</span>
-              </button>
-            )}
-            {game.appid && (
-              <Link
-                href={`/share/${game.appid}`}
-                target="_blank"
-                aria-label={`Share ${game.name}`}
-                title="Share"
-                className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
-              >
-                <span aria-hidden="true">↗</span>
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={() => onRefresh(key)}
-              disabled={refreshing}
-              aria-label={`Refresh prices for ${game.name}`}
-              title="Refresh prices"
-              className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-            >
-              {refreshing ? (
-                <span className="inline-block animate-spin" aria-hidden="true">
-                  ↻
-                </span>
-              ) : (
-                <span aria-hidden="true">↻</span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => onRemove(key)}
-              aria-label={`Remove ${game.name}`}
-              title="Remove game"
-              className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30"
-            >
-              <span aria-hidden="true">✕</span>
-            </button>
-          </div>
         </div>
+
+        {best && <BestDealBanner bestStore={best} />}
 
         <StorePriceList
           prices={game.prices}
@@ -139,8 +144,6 @@ export default function GameCard({
           bestStore={best}
           stores={visibleStores}
         />
-
-        {best && <BestDealBanner bestStore={best} />}
 
         {/* Last updated */}
         {game.lastFetched && (
