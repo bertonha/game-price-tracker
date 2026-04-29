@@ -3,6 +3,7 @@ pre-commit:
   commands:
     biome:
       glob: "*.{ts,tsx,js,jsx,json,css}"
+      exclude: "package-lock.json"
       run: npx biome check --write {staged_files}
       stage_fixed: true
     typecheck:
