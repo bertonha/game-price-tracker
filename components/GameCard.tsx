@@ -136,7 +136,7 @@ export default function GameCard({
           </h3>
         </div>
 
-        {best && <BestDealBanner bestStore={best} />}
+        {<BestDealBanner bestStore={best} />}
 
         <StorePriceList
           prices={game.prices}
