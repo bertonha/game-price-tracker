@@ -3,6 +3,10 @@
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+specs/
+.specify/
+doc/
+.opencode/command/speckit*
 
 # testing
 /coverage

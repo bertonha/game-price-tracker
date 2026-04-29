@@ -61,6 +61,38 @@ export default function HomePage() {
   const [progress, setProgress] = useState<number | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [sortOrder, setSortOrder] = useState<"priority" | "cheapest" | "expensive">("priority");
+  const [showStarredOnly, setShowStarredOnly] = useState(false);
+
+  function prioritizeStarred(list: Game[]): Game[] {
+    const starred = list.filter((g) => g.isFavorite);
+    const others = list.filter((g) => !g.isFavorite);
+    return [...starred, ...others];
+  }
+
+  function sortByPriceWithinStarGroups(list: Game[], direction: "asc" | "desc"): Game[] {
+    function minPrice(game: Game): number {
+      let min = Number.POSITIVE_INFINITY;
+      for (const info of Object.values(game.prices)) {
+        if (!info?.price || info.price === "N/A") continue;
+        const n = parseFloat(info.price.replace(/[^0-9.,]/g, "").replace(",", "."));
+        if (!Number.isNaN(n) && n < min) min = n;
+      }
+      return min;
+    }
+
+    function byPrice(a: Game, b: Game): number {
+      const pa = minPrice(a);
+      const pb = minPrice(b);
+      if (pa === Number.POSITIVE_INFINITY && pb === Number.POSITIVE_INFINITY) return 0;
+      if (pa === Number.POSITIVE_INFINITY) return 1;
+      if (pb === Number.POSITIVE_INFINITY) return -1;
+      return direction === "asc" ? pa - pb : pb - pa;
+    }
+
+    const starred = list.filter((g) => g.isFavorite).sort(byPrice);
+    const others = list.filter((g) => !g.isFavorite).sort(byPrice);
+    return [...starred, ...others];
+  }
 
   // On mount: resolve user, load games from Supabase.
   // If DB is empty and localStorage has games → auto-import once.
@@ -361,7 +393,7 @@ export default function HomePage() {
     if (!over || active.id === over.id) return;
     const oldIndex = games.findIndex((g) => gameKey(g) === active.id);
     const newIndex = games.findIndex((g) => gameKey(g) === over.id);
-    persistGames(arrayMove(games, oldIndex, newIndex));
+    persistGames(prioritizeStarred(arrayMove(games, oldIndex, newIndex)));
   }
 
   function removeGame(key: string) {
@@ -370,6 +402,34 @@ export default function HomePage() {
       deleteUserGame(supabase, userIdRef.current, game.appid);
     }
     persistGames(games.filter((g) => gameKey(g) !== key));
+  }
+
+  async function toggleFavorite(appid: string) {
+    const gameIndex = games.findIndex((g) => g.appid === appid);
+    if (gameIndex === -1) return;
+
+    const game = games[gameIndex];
+    const prevGames = [...games];
+    const updatedGame = { ...game, isFavorite: !game.isFavorite };
+    const nextGames = [...games];
+    nextGames[gameIndex] = updatedGame;
+    const normalizedGames = prioritizeStarred(nextGames);
+
+    // Optimistic update
+    setGames(normalizedGames);
+    saveGames(normalizedGames);
+
+    if (supabase && userIdRef.current) {
+      try {
+        await upsertAllUserGames(supabase, userIdRef.current, normalizedGames);
+      } catch {
+        // Revert on failure
+        setGames(prevGames);
+        saveGames(prevGames);
+        setStatus("Failed to update favorite status. Please try again.");
+        setTimeout(() => setStatus(""), 3000);
+      }
+    }
   }
 
   function clearAll() {
@@ -404,34 +464,21 @@ export default function HomePage() {
 
   if (!hydrated) return null;
 
-  const filteredGames =
+  const storeFilteredGames =
     activeStores.size === 0
       ? games
       : games.filter((g) => activeStores.has(bestDeal(g.prices) ?? ""));
 
-  function minPrice(game: Game): number {
-    let min = Number.POSITIVE_INFINITY;
-    for (const info of Object.values(game.prices)) {
-      if (!info?.price || info.price === "N/A") continue;
-      const n = parseFloat(info.price.replace(/[^0-9.,]/g, "").replace(",", "."));
-      if (!Number.isNaN(n) && n < min) min = n;
-    }
-    return min;
-  }
+  const filteredGames = showStarredOnly
+    ? storeFilteredGames.filter((g) => g.isFavorite)
+    : storeFilteredGames;
 
   const displayedGames =
     sortOrder === "cheapest"
-      ? [...filteredGames].sort((a, b) => minPrice(a) - minPrice(b))
+      ? sortByPriceWithinStarGroups(filteredGames, "asc")
       : sortOrder === "expensive"
-        ? [...filteredGames].sort((a, b) => {
-            const pa = minPrice(a);
-            const pb = minPrice(b);
-            if (pa === Number.POSITIVE_INFINITY && pb === Number.POSITIVE_INFINITY) return 0;
-            if (pa === Number.POSITIVE_INFINITY) return 1;
-            if (pb === Number.POSITIVE_INFINITY) return -1;
-            return pb - pa;
-          })
-        : filteredGames;
+        ? sortByPriceWithinStarGroups(filteredGames, "desc")
+        : prioritizeStarred(filteredGames);
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -500,6 +547,31 @@ export default function HomePage() {
       {/* Store filter */}
       <div className="mb-5">
         <StoreFilter activeStores={activeStores} onToggle={toggleStore} />
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-gray-500 text-xs">Favorites:</span>
+          <button
+            type="button"
+            onClick={() => setShowStarredOnly(false)}
+            className={`rounded-full border px-3 py-1 text-xs transition-all ${
+              !showStarredOnly
+                ? "border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900"
+                : "border-gray-300 bg-transparent text-gray-500 hover:border-gray-500 dark:border-gray-600"
+            }`}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowStarredOnly(true)}
+            className={`rounded-full border px-3 py-1 text-xs transition-all ${
+              showStarredOnly
+                ? "border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900"
+                : "border-gray-300 bg-transparent text-gray-500 hover:border-gray-500 dark:border-gray-600"
+            }`}
+          >
+            Starred only
+          </button>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -571,6 +643,8 @@ export default function HomePage() {
                     game={game}
                     onRemove={removeGame}
                     onRefresh={refreshOne}
+                    isFavorite={game.isFavorite}
+                    onToggleFavorite={toggleFavorite}
                     refreshing={refreshingKeys.has(key)}
                     prioritizeImage={idx === 0}
                   />
