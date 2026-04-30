@@ -62,6 +62,7 @@ export default function HomePage() {
   const [hydrated, setHydrated] = useState(false);
   const [sortOrder, setSortOrder] = useState<"priority" | "cheapest" | "expensive">("priority");
   const [showStarredOnly, setShowStarredOnly] = useState(false);
+  const [savedGamesQuery, setSavedGamesQuery] = useState("");
 
   function prioritizeStarred(list: Game[]): Game[] {
     const starred = list.filter((g) => g.isFavorite);
@@ -473,12 +474,21 @@ export default function HomePage() {
     ? storeFilteredGames.filter((g) => g.isFavorite)
     : storeFilteredGames;
 
+  const searchFilteredGames = filteredGames.filter((g) => {
+    const query = savedGamesQuery.trim().toLowerCase();
+    if (!query) return true;
+    return g.name.toLowerCase().includes(query) || g.appid.includes(query);
+  });
+
   const displayedGames =
     sortOrder === "cheapest"
-      ? sortByPriceWithinStarGroups(filteredGames, "asc")
+      ? sortByPriceWithinStarGroups(searchFilteredGames, "asc")
       : sortOrder === "expensive"
-        ? sortByPriceWithinStarGroups(filteredGames, "desc")
-        : prioritizeStarred(filteredGames);
+        ? sortByPriceWithinStarGroups(searchFilteredGames, "desc")
+        : prioritizeStarred(searchFilteredGames);
+
+  const hasActiveFilters =
+    activeStores.size > 0 || showStarredOnly || savedGamesQuery.trim().length > 0;
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -545,32 +555,77 @@ export default function HomePage() {
       </p>
 
       {/* Store filter */}
-      <div className="mb-5">
-        <StoreFilter activeStores={activeStores} onToggle={toggleStore} />
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-gray-500 text-xs">Favorites:</span>
-          <button
-            type="button"
-            onClick={() => setShowStarredOnly(false)}
-            className={`rounded-full border px-3 py-1 text-xs transition-all ${
-              !showStarredOnly
-                ? "border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900"
-                : "border-gray-300 bg-transparent text-gray-500 hover:border-gray-500 dark:border-gray-600"
-            }`}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowStarredOnly(true)}
-            className={`rounded-full border px-3 py-1 text-xs transition-all ${
-              showStarredOnly
-                ? "border-gray-900 bg-gray-900 text-white dark:border-white dark:bg-white dark:text-gray-900"
-                : "border-gray-300 bg-transparent text-gray-500 hover:border-gray-500 dark:border-gray-600"
-            }`}
-          >
-            Starred only
-          </button>
+      <div className="mb-5 overflow-hidden rounded-2xl border border-gray-200 bg-linear-to-br from-gray-50 via-white to-gray-100/70 p-4 shadow-sm dark:border-gray-800 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <div>
+              <p className="font-semibold text-gray-900 text-sm dark:text-gray-100">
+                Refine your collection
+              </p>
+              <p className="text-gray-500 text-xs dark:text-gray-400">
+                Filter by best-deal store, favorites, or search inside your saved games.
+              </p>
+            </div>
+            <StoreFilter activeStores={activeStores} onToggle={toggleStore} />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-1 font-medium text-[11px] text-gray-400 uppercase tracking-[0.24em] dark:text-gray-500">
+                Favorites
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowStarredOnly(false)}
+                aria-pressed={!showStarredOnly}
+                className={`rounded-full border px-3 py-1.5 font-medium text-xs transition-all ${
+                  !showStarredOnly
+                    ? "border-gray-900 bg-gray-900 text-white shadow-gray-900/15 shadow-sm dark:border-white dark:bg-white dark:text-gray-900"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800"
+                }`}
+              >
+                All games
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowStarredOnly(true)}
+                aria-pressed={showStarredOnly}
+                className={`rounded-full border px-3 py-1.5 font-medium text-xs transition-all ${
+                  showStarredOnly
+                    ? "border-gray-900 bg-gray-900 text-white shadow-gray-900/15 shadow-sm dark:border-white dark:bg-white dark:text-gray-900"
+                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800"
+                }`}
+              >
+                Starred only
+              </button>
+            </div>
+          </div>
+
+          <div className="w-full lg:max-w-md">
+            <label
+              htmlFor="saved-games-filter"
+              className="mb-2 block font-medium text-[11px] text-gray-400 uppercase tracking-[0.24em] dark:text-gray-500"
+            >
+              Search saved games
+            </label>
+            <div className="relative">
+              <input
+                id="saved-games-filter"
+                type="text"
+                value={savedGamesQuery}
+                onChange={(e) => setSavedGamesQuery(e.target.value)}
+                placeholder="Find by title or AppID"
+                className="w-full rounded-xl border border-gray-200 bg-white/95 px-4 py-2.5 pr-10 text-gray-900 text-sm shadow-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200 dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-100 dark:focus:border-gray-500 dark:focus:ring-gray-800"
+              />
+              {savedGamesQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSavedGamesQuery("")}
+                  className="absolute inset-y-0 right-3 text-gray-400 transition-colors hover:text-gray-700 dark:hover:text-gray-200"
+                  aria-label="Clear saved games search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -603,8 +658,8 @@ export default function HomePage() {
         </select>
         {games.length > 0 && (
           <span className="ml-auto text-gray-400 text-xs">
-            {activeStores.size > 0
-              ? `${filteredGames.length} of ${games.length} game${games.length !== 1 ? "s" : ""}`
+            {hasActiveFilters
+              ? `${displayedGames.length} of ${games.length} game${games.length !== 1 ? "s" : ""}`
               : `${games.length} game${games.length !== 1 ? "s" : ""} saved`}
           </span>
         )}
@@ -626,6 +681,15 @@ export default function HomePage() {
         <div className="py-20 text-center text-gray-400">
           <div className="mb-4 text-4xl">🎮</div>
           <p className="text-sm">No games added yet — search for a game above to get started.</p>
+        </div>
+      ) : displayedGames.length === 0 ? (
+        <div className="rounded-2xl border border-gray-300 border-dashed bg-gray-50/70 px-6 py-16 text-center dark:border-gray-700 dark:bg-gray-900/40">
+          <p className="font-medium text-gray-700 text-sm dark:text-gray-200">
+            No saved games match the current filters.
+          </p>
+          <p className="mt-2 text-gray-500 text-xs dark:text-gray-400">
+            Adjust the store chips, favorites filter, or your search term to see more games.
+          </p>
         </div>
       ) : (
         <DndContext
