@@ -36,7 +36,7 @@ export default function GameCard({
   return (
     <article
       aria-label={game.name}
-      className="min-h-105 flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+      className="flex min-h-105 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
     >
       {/* Header image — also the drag handle */}
       <div
@@ -57,7 +57,7 @@ export default function GameCard({
         )}
       </div>
 
-      <div className="flex flex-col pt-3 px-3 items-end">
+      <div className="flex flex-col items-end px-3 pt-3">
         <div className="flex flex-shrink-0 gap-2">
           {onToggleFavorite && game.appid && (
             <button
@@ -117,7 +117,7 @@ export default function GameCard({
       </div>
 
       {/* Body */}
-      <div className="flex flex-1 flex-col gap-2 p-3 pt-0 overflow-auto">
+      <div className="flex flex-1 flex-col gap-2 overflow-auto p-3 pt-0">
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 flex-1 font-medium text-sm leading-tight">
