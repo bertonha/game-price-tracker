@@ -3,9 +3,11 @@
 import { Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { type Game, STORES } from "@/lib/types";
 import { bestDeal, formatReleaseDate, gameKey, timeAgo } from "@/lib/utils";
 import BestDealBanner from "./BestDealBanner";
+import ShareModal from "./ShareModal";
 import StorePriceList from "./StorePriceList";
 
 interface Props {
@@ -29,6 +31,7 @@ export default function GameCard({
   prioritizeImage = false,
   dragHandleProps,
 }: Props) {
+  const [showShareModal, setShowShareModal] = useState(false);
   const key = gameKey(game);
   const best = bestDeal(game.prices);
   const releaseDate = game.releaseDate ? new Date(game.releaseDate) : null;
@@ -38,7 +41,7 @@ export default function GameCard({
   return (
     <article
       aria-label={game.name}
-      className="flex min-h-105 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+      className="flex min-h-115 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
     >
       {/* Header image — also the drag handle */}
       <div
@@ -166,7 +169,19 @@ export default function GameCard({
             </time>
           </p>
         )}
+
+        {/* Share button */}
+        <button
+          type="button"
+          onClick={() => setShowShareModal(true)}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-gray-400 text-xs transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+        >
+          <span aria-hidden="true">📤</span>
+          Share
+        </button>
       </div>
+
+      <ShareModal game={game} isOpen={showShareModal} onClose={() => setShowShareModal(false)} />
     </article>
   );
 }
