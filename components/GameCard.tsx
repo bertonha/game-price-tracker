@@ -1,5 +1,6 @@
 "use client";
 
+import { Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { type Game, STORES } from "@/lib/types";
@@ -120,20 +121,30 @@ export default function GameCard({
       <div className="flex flex-1 flex-col gap-2 overflow-auto p-3 pt-0">
         {/* Title row */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="min-w-0 flex-1 font-medium text-sm leading-tight">
-            {game.appid ? (
-              <a
-                href={`https://store.steampowered.com/app/${game.appid}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-              >
-                {game.name}
-              </a>
-            ) : (
-              game.name
+          <div className="min-w-0 flex-1">
+            <h3 className="font-medium text-sm leading-tight">
+              {game.appid ? (
+                <a
+                  href={`https://store.steampowered.com/app/${game.appid}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  {game.name}
+                </a>
+              ) : (
+                game.name
+              )}
+            </h3>
+            {(game.releaseDate || game.comingSoon) && (
+              <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
+                {game.comingSoon && (
+                  <Star className="mr-1 inline size-3 text-yellow-400" fill="currentColor" />
+                )}
+                {game.releaseDate ?? "Coming soon"}
+              </p>
             )}
-          </h3>
+          </div>
         </div>
 
         {<BestDealBanner bestStore={best} />}

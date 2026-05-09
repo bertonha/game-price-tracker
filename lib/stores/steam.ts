@@ -1,6 +1,8 @@
 import type { Edition, StorePrice } from "@/lib/types";
 import { stripGamePrefix } from "@/lib/utils";
 
+export type SteamResult = { price: StorePrice; releaseDate?: string; comingSoon: boolean };
+
 const STEAM_COUNTRY = process.env.STEAM_COUNTRY ?? "BR";
 const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "portuguese";
 
@@ -18,14 +20,14 @@ export const decodeHtml = (s: string) =>
     .replace(/&ndash;/g, "–")
     .replace(/&mdash;/g, "—");
 
-export async function fetchSteam(appid: string, name: string): Promise<StorePrice> {
+export async function fetchSteam(appid: string, name: string): Promise<SteamResult> {
   const storeUrl = `https://store.steampowered.com/app/${appid}/?cc=${STEAM_COUNTRY}`;
   try {
     const res = await fetch(
       `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=${STEAM_COUNTRY}&l=${STEAM_LANGUAGE}`,
       { next: { revalidate: 3600 } },
     );
-    if (!res.ok) return { price: "N/A", url: storeUrl };
+    if (!res.ok) return { price: { price: "N/A", url: storeUrl }, comingSoon: false };
 
     const json = (await res.json()) as Record<
       string,
@@ -41,14 +43,20 @@ export async function fetchSteam(appid: string, name: string): Promise<StorePric
               price_in_cents_with_discount: number;
             }[];
           }[];
+          release_date?: { coming_soon?: boolean; date?: string };
         };
       }
     >;
 
     const data = json[appid]?.data;
-    if (!data) return { price: "N/A", url: storeUrl };
+    if (!data) return { price: { price: "N/A", url: storeUrl }, comingSoon: false };
 
-    if (data.is_free) return { price: "Free to Play", url: storeUrl };
+    const releaseDateRaw = data.release_date;
+    const comingSoon = releaseDateRaw?.coming_soon ?? false;
+    const releaseDate = releaseDateRaw?.date || undefined;
+
+    if (data.is_free)
+      return { price: { price: "Free to Play", url: storeUrl }, releaseDate, comingSoon };
 
     const overview = data.price_overview;
     const base: StorePrice = overview
@@ -78,8 +86,12 @@ export async function fetchSteam(appid: string, name: string): Promise<StorePric
         url: `https://store.steampowered.com/sub/${s.packageid}/?cc=BR`,
       }));
 
-    return { ...base, editions: editions.length > 0 ? editions : undefined };
+    return {
+      price: { ...base, editions: editions.length > 0 ? editions : undefined },
+      releaseDate,
+      comingSoon,
+    };
   } catch {
-    return { price: "N/A", url: storeUrl };
+    return { price: { price: "N/A", url: storeUrl }, comingSoon: false };
   }
 }

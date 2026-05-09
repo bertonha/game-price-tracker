@@ -29,35 +29,48 @@ export async function POST(req: NextRequest) {
   if (!force && supabase) {
     const { data } = await supabase
       .from("games")
-      .select("prices, last_fetched")
+      .select("prices, last_fetched, release_date, coming_soon")
       .eq("appid", appid)
       .single();
 
     if (data?.last_fetched && Date.now() - data.last_fetched < ONE_HOUR) {
-      return NextResponse.json({ prices: data.prices, lastFetched: data.last_fetched });
+      return NextResponse.json({
+        prices: data.prices,
+        lastFetched: data.last_fetched,
+        releaseDate: data.release_date ?? undefined,
+        comingSoon: data.coming_soon ?? false,
+      });
     }
   }
 
-  const [steam, nuuvem, instantGaming] = await Promise.all([
+  const [steamResult, nuuvem, instantGaming] = await Promise.all([
     fetchSteam(appid, name).catch(() => null),
     fetchNuuvem(name).catch(() => null),
     fetchInstantGaming(name).catch(() => null),
   ]);
 
   const prices: Partial<GamePrices> = {};
-  if (steam !== null) prices.steam = steam;
+  if (steamResult !== null) prices.steam = steamResult.price;
   if (nuuvem !== null) prices.nuuvem = nuuvem;
   if (instantGaming !== null) prices["instant-gaming"] = instantGaming;
 
+  const releaseDate = steamResult?.releaseDate;
+  const comingSoon = steamResult?.comingSoon ?? false;
   const lastFetched = Date.now();
 
   if (supabase) {
     supabase
       .from("games")
-      .update({ prices, last_fetched: lastFetched, updated_at: new Date().toISOString() })
+      .update({
+        prices,
+        last_fetched: lastFetched,
+        release_date: releaseDate ?? null,
+        coming_soon: comingSoon,
+        updated_at: new Date().toISOString(),
+      })
       .eq("appid", appid)
       .then(() => {});
   }
 
-  return NextResponse.json({ prices, lastFetched });
+  return NextResponse.json({ prices, lastFetched, releaseDate, comingSoon });
 }

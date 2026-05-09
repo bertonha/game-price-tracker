@@ -12,6 +12,8 @@ type UserGameRow = {
     img: string;
     prices: Game["prices"];
     last_fetched: number | null;
+    release_date: string | null;
+    coming_soon: boolean;
   };
 };
 
@@ -24,6 +26,8 @@ function rowToGame(row: UserGameRow): Game {
     lastFetched: row.games.last_fetched ?? undefined,
     addedAt: row.added_at,
     isFavorite: row.is_favorite ?? false,
+    releaseDate: row.games.release_date ?? undefined,
+    comingSoon: row.games.coming_soon ?? false,
   };
 }
 
@@ -32,7 +36,9 @@ function rowToGame(row: UserGameRow): Game {
 export async function loadUserGames(supabase: SupabaseClient, userId: string): Promise<Game[]> {
   const { data, error } = await supabase
     .from("user_games")
-    .select("appid, added_at, sort_order, is_favorite, games(name, img, prices, last_fetched)")
+    .select(
+      "appid, added_at, sort_order, is_favorite, games(name, img, prices, last_fetched, release_date, coming_soon)",
+    )
     .eq("user_id", userId)
     .order("sort_order", { ascending: true });
 
@@ -58,6 +64,8 @@ export async function upsertUserGame(
       img: game.img,
       prices: game.prices,
       last_fetched: game.lastFetched ?? null,
+      release_date: game.releaseDate ?? null,
+      coming_soon: game.comingSoon ?? false,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "appid" },
@@ -92,6 +100,8 @@ export async function upsertAllUserGames(
     img: g.img,
     prices: g.prices,
     last_fetched: g.lastFetched ?? null,
+    release_date: g.releaseDate ?? null,
+    coming_soon: g.comingSoon ?? false,
     updated_at: new Date().toISOString(),
   }));
 

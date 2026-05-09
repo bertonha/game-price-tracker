@@ -24,6 +24,8 @@ export interface Game {
   lastFetched?: number;
   addedAt: number;
   isFavorite?: boolean;
+  releaseDate?: string;
+  comingSoon?: boolean;
 }
 
 export interface SteamSuggestion {

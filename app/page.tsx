@@ -193,10 +193,18 @@ export default function HomePage() {
       body: JSON.stringify({ appid: game.appid, name: game.name, force }),
     });
     if (!res.ok) return;
-    const { prices, lastFetched } = await res.json();
+    const { prices, lastFetched, releaseDate, comingSoon } = await res.json();
     setGames((prev) => {
       const next = prev.map((g) =>
-        gameKey(g) === key ? { ...g, prices: { ...g.prices, ...prices }, lastFetched } : g,
+        gameKey(g) === key
+          ? {
+              ...g,
+              prices: { ...g.prices, ...prices },
+              lastFetched,
+              ...(releaseDate !== undefined && { releaseDate }),
+              ...(comingSoon !== undefined && { comingSoon }),
+            }
+          : g,
       );
       saveGames(next);
       if (supabase && userIdRef.current) {
@@ -223,10 +231,14 @@ export default function HomePage() {
     }
 
     let resolved = { ...input };
+    let releaseDate: string | undefined;
+    let comingSoon: boolean | undefined;
     try {
       const res = await fetch(`/api/game-details?appid=${input.appid}`);
       const data = await res.json();
       if (data.name) resolved = { ...resolved, name: data.name, img: data.img };
+      if (data.releaseDate) releaseDate = data.releaseDate;
+      if (data.comingSoon !== undefined) comingSoon = data.comingSoon;
     } catch {
       /* fall back to suggestion data */
     }
@@ -236,6 +248,8 @@ export default function HomePage() {
       ...resolved,
       prices: {},
       addedAt: Date.now(),
+      releaseDate,
+      comingSoon,
     };
 
     const updated = [newGame, ...games];

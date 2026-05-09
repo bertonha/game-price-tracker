@@ -23,10 +23,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Game not found" }, { status: 404 });
     }
 
+    const releaseDateRaw = appData.release_date as
+      | { coming_soon?: boolean; date?: string }
+      | undefined;
+
     return NextResponse.json({
       appid,
       name: appData.name as string,
       img: appData.header_image as string,
+      releaseDate: releaseDateRaw?.date || undefined,
+      comingSoon: releaseDateRaw?.coming_soon ?? false,
     });
   } catch {
     return NextResponse.json({ error: "Failed to fetch game details" }, { status: 500 });
