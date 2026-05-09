@@ -25,7 +25,7 @@ import {
   upsertAllUserGames,
   upsertUserGame,
 } from "@/lib/supabase/storage";
-import type { Game, GamePrices, SteamSuggestion, StorePrice } from "@/lib/types";
+import type { Game, SteamSuggestion } from "@/lib/types";
 import { bestDeal, gameKey } from "@/lib/utils";
 
 function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
@@ -185,64 +185,27 @@ export default function HomePage() {
     [supabase],
   );
 
-  async function fetchPrices(game: Game): Promise<void> {
+  async function fetchPrices(game: Game, force = false): Promise<void> {
     const key = gameKey(game);
-    const update = (storeId: keyof GamePrices, price: StorePrice) =>
-      setGames((prev) => {
-        const next = prev.map((g) =>
-          gameKey(g) === key
-            ? {
-                ...g,
-                prices: { ...g.prices, [storeId]: price },
-                lastFetched: Date.now(),
-              }
-            : g,
-        );
-        saveGames(next);
-        if (supabase && userIdRef.current) {
-          const updated = next.find((g) => gameKey(g) === key);
-          const sortOrder = next.findIndex((g) => gameKey(g) === key);
-          if (updated) {
-            upsertUserGame(supabase, userIdRef.current, updated, sortOrder);
-          }
-        }
-        return next;
-      });
-
-    const steam = fetch("/api/fetch-prices/steam", {
+    const res = await fetch("/api/fetch-prices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: game.name, appid: game.appid }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.price) update("steam", d.price);
-      })
-      .catch(() => {});
-
-    const nuuvem = fetch("/api/fetch-prices/nuuvem", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: game.name }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.price) update("nuuvem", d.price);
-      })
-      .catch(() => {});
-
-    const instantGaming = fetch("/api/fetch-prices/instant-gaming", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: game.name }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.price) update("instant-gaming", d.price);
-      })
-      .catch(() => {});
-
-    await Promise.all([steam, nuuvem, instantGaming]);
+      body: JSON.stringify({ appid: game.appid, name: game.name, force }),
+    });
+    if (!res.ok) return;
+    const { prices, lastFetched } = await res.json();
+    setGames((prev) => {
+      const next = prev.map((g) =>
+        gameKey(g) === key ? { ...g, prices: { ...g.prices, ...prices }, lastFetched } : g,
+      );
+      saveGames(next);
+      if (supabase && userIdRef.current) {
+        const updated = next.find((g) => gameKey(g) === key);
+        const idx = next.findIndex((g) => gameKey(g) === key);
+        if (updated) upsertUserGame(supabase, userIdRef.current, updated, idx);
+      }
+      return next;
+    });
   }
 
   async function addGame(input: SteamSuggestion | { name: string; appid: string; img: string }) {
@@ -302,7 +265,7 @@ export default function HomePage() {
     setGames((prev) => prev.map((g) => (gameKey(g) === key ? { ...g, prices: {} } : g)));
     setStatus(`Refreshing "${game.name}"…`);
     try {
-      await fetchPrices(game);
+      await fetchPrices(game, true);
       setStatus("");
     } catch {
       setStatus(`Failed to refresh "${game.name}".`);
@@ -348,7 +311,7 @@ export default function HomePage() {
     await Promise.all(
       stale.map(async (game) => {
         const key = gameKey(game);
-        await fetchPrices(game).catch(() => {});
+        await fetchPrices(game, force).catch(() => {});
         setRefreshingKeys((prev) => {
           const s = new Set(prev);
           s.delete(key);
