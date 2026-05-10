@@ -2,59 +2,13 @@
 
 import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Game, StoreId } from "@/lib/types";
+import { buildWhatsAppText, findBestPrice } from "@/lib/share";
+import { type Game, STORES } from "@/lib/types";
 
 interface Props {
   game: Game | null;
   isOpen: boolean;
   onClose: () => void;
-}
-
-const STORE_LIST: { id: StoreId; name: string; color: string; abbr: string }[] = [
-  { id: "steam", name: "Steam BR", color: "#1b2838", abbr: "ST" },
-  { id: "nuuvem", name: "Nuuvem", color: "#e8392b", abbr: "NU" },
-  { id: "instant-gaming", name: "Instant Gaming", color: "#e8a000", abbr: "IG" },
-];
-
-function parsePrice(priceStr: string | null): number | null {
-  if (!priceStr || priceStr === "N/A") return null;
-  const num = parseFloat(priceStr.replace(/[^\d.,]/g, "").replace(",", "."));
-  return Number.isNaN(num) ? null : num;
-}
-
-function findBestPrice(
-  game: Game,
-): { price: string; url: string; platform: string; id: StoreId } | null {
-  let best: { price: string; url: string; platform: string; id: StoreId; parsed: number } | null =
-    null;
-  for (const store of STORE_LIST) {
-    const info = game.prices[store.id];
-    if (!info?.price || !info?.url) continue;
-    const parsed = parsePrice(info.price);
-    if (parsed === null) continue;
-    if (!best || parsed < best.parsed) {
-      best = { price: info.price, url: info.url, platform: store.name, id: store.id, parsed };
-    }
-  }
-  if (!best) return null;
-  const { parsed: _parsed, ...result } = best;
-  return result;
-}
-
-function buildWhatsAppText(
-  gameName: string,
-  url: string,
-  price: string | null,
-  platform: string,
-  isBestPrice: boolean,
-): string {
-  if (isBestPrice && price) {
-    return `We found the best price on ${platform} for ${gameName} (${price}), check it out!\n${url}`;
-  }
-  if (price) {
-    return `Checkout ${gameName} for ${price} on ${platform}!\n${url}`;
-  }
-  return `Check out ${gameName} on ${platform}!\n${url}`;
 }
 
 function WhatsAppIcon() {
@@ -226,7 +180,7 @@ export default function ShareModal({ game, isOpen, onClose }: Props) {
             </div>
           )}
 
-          {STORE_LIST.map((store) => {
+          {STORES.map((store) => {
             const priceInfo = game.prices[store.id];
             const url = priceInfo?.url;
 
