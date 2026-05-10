@@ -4,7 +4,7 @@ import { Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { type Game, STORES } from "@/lib/types";
-import { bestDeal, formatReleaseDate, gameKey, parseReleaseDate, timeAgo } from "@/lib/utils";
+import { bestDeal, formatReleaseDate, gameKey, timeAgo } from "@/lib/utils";
 import BestDealBanner from "./BestDealBanner";
 import StorePriceList from "./StorePriceList";
 
@@ -31,7 +31,7 @@ export default function GameCard({
 }: Props) {
   const key = gameKey(game);
   const best = bestDeal(game.prices);
-  const releaseDate = game.releaseDate ? parseReleaseDate(game.releaseDate) : null;
+  const releaseDate = game.releaseDate ? new Date(game.releaseDate) : null;
 
   const visibleStores = STORES;
 

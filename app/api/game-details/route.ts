@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { parseReleaseDate } from "@/lib/utils";
 
 const STEAM_COUNTRY = process.env.STEAM_COUNTRY ?? "BR";
-const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "portuguese";
+const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "english";
 
 export async function GET(req: NextRequest) {
   const appid = req.nextUrl.searchParams.get("appid")?.trim();
@@ -31,7 +32,9 @@ export async function GET(req: NextRequest) {
       appid,
       name: appData.name as string,
       img: appData.header_image as string,
-      releaseDate: releaseDateRaw?.date || undefined,
+      releaseDate: releaseDateRaw?.date
+        ? (parseReleaseDate(releaseDateRaw.date)?.toISOString() ?? undefined)
+        : undefined,
       comingSoon: releaseDateRaw?.coming_soon ?? false,
     });
   } catch {

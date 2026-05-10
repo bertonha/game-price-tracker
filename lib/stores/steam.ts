@@ -1,5 +1,5 @@
 import type { Edition, StorePrice } from "@/lib/types";
-import { stripGamePrefix } from "@/lib/utils";
+import { parseReleaseDate, stripGamePrefix } from "@/lib/utils";
 
 export type SteamResult = { price: StorePrice; releaseDate?: string; comingSoon: boolean };
 
@@ -53,7 +53,9 @@ export async function fetchSteam(appid: string, name: string): Promise<SteamResu
 
     const releaseDateRaw = data.release_date;
     const comingSoon = releaseDateRaw?.coming_soon ?? false;
-    const releaseDate = releaseDateRaw?.date || undefined;
+    const releaseDate = releaseDateRaw?.date
+      ? (parseReleaseDate(releaseDateRaw.date)?.toISOString() ?? undefined)
+      : undefined;
 
     if (data.is_free)
       return { price: { price: "Free to Play", url: storeUrl }, releaseDate, comingSoon };

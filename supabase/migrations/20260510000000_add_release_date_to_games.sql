@@ -1,1 +1,0 @@
-ALTER TABLE games ADD COLUMN IF NOT EXISTS release_date TEXT;
