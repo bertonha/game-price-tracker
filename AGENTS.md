@@ -17,7 +17,7 @@ A Next.js (App Router) application that compares game prices across **Steam BR**
 - **Git Hooks:** Managed via `lefthook`.
 
 ## 3. Directory Structure & Key Locations
-- `app/api/` - Backend endpoints (`fetch-prices`, `search-games`, `import-steam-wishlist`, `account`).
+- `app/api/` - Backend endpoints (`fetch-prices`, `search-games`, `game-details`, `import-steam-wishlist`, `account`).
 - `lib/stores/` - **Crucial:** Core logic for scraping and matching game data across stores.
 - `lib/supabase/` - Supabase client config and storage helpers (`storage.ts`).
 - `lib/types.ts` - Centralized domain models and TypeScript definitions.
@@ -38,7 +38,7 @@ A Next.js (App Router) application that compares game prices across **Steam BR**
   - `user_games`: Links users to their tracked games for cross-device sync.
 
 ### UI Patterns
-- **Draggable Cards:** Games can be reordered using `@dnd-kit`.
+- **Draggable Cards:** Games can be reordered using `@dnd-kit`. Drag-and-drop is only active when the sort order is set to **Priority**; all other sort modes disable it.
 - **Hydration:** Handled carefully to support both guest (localStorage) and auth (Supabase) states.
 
 ## 5. Commands & Workflows
@@ -49,6 +49,9 @@ A Next.js (App Router) application that compares game prices across **Steam BR**
 - **Testing:** `npm test` or `npm run test` (runs Vitest)
 - **Pre-commit Workflow:** Managed via `lefthook`. Pre-commit runs Biome check and typecheck; pre-push runs tests. Always ensure compliance before committing.
 
-## 6. Related Documentation
+## 6. After Editing Code
+
+Always run `npm run lint` after finishing code edits and fix any issues before reporting the task as done.
+
+## 7. Related Documentation
 - `README.md`: Basic setup and environment variable guide.
-- `doc/`: Feature specifications and design documents (e.g., `filter-starred-games.md`).
