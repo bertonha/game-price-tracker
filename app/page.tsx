@@ -16,10 +16,11 @@ import ShareModal from "@/components/ShareModal";
 import SortableGameCard from "@/components/SortableGameCard";
 import StoreFilter from "@/components/StoreFilter";
 import { useCollection } from "@/hooks/useCollection";
+import { filterByFavorite, filterByQuery, filterByStore } from "@/lib/filter";
 import { type SortOrder, sortGames } from "@/lib/sort";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Game } from "@/lib/types";
-import { bestDeal, gameKey } from "@/lib/utils";
+import { gameKey } from "@/lib/utils";
 
 export default function HomePage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -74,20 +75,13 @@ export default function HomePage() {
 
   if (!hydrated) return null;
 
-  const storeFilteredGames =
-    activeStores.size === 0
-      ? games
-      : games.filter((g) => activeStores.has(bestDeal(g.prices) ?? ""));
-
-  const searchFilteredGames = (
-    showStarredOnly ? storeFilteredGames.filter((g) => g.isFavorite) : storeFilteredGames
-  ).filter((g) => {
-    const query = savedGamesQuery.trim().toLowerCase();
-    if (!query) return true;
-    return g.name.toLowerCase().includes(query) || g.appid.includes(query);
-  });
-
-  const displayedGames = sortGames(searchFilteredGames, sortOrder);
+  const displayedGames = sortGames(
+    filterByQuery(
+      filterByFavorite(filterByStore(games, activeStores), showStarredOnly),
+      savedGamesQuery,
+    ),
+    sortOrder,
+  );
 
   const hasActiveFilters =
     activeStores.size > 0 || showStarredOnly || savedGamesQuery.trim().length > 0;
