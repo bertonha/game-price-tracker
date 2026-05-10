@@ -1,6 +1,6 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { ExternalLink, RefreshCw, Share2, Star, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -63,7 +63,7 @@ export default function GameCard({
       </div>
 
       <div className="flex flex-col items-end px-3 pt-3">
-        <div className="flex flex-shrink-0 gap-2">
+        <div className="flex flex-shrink-0 gap-1.5">
           {onToggleFavorite && game.appid && (
             <button
               type="button"
@@ -73,24 +73,33 @@ export default function GameCard({
               }}
               aria-label={`${isFavorite ? "Unstar" : "Star"} ${game.name}`}
               title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-              className={`rounded p-1 text-xs transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-900/30 ${
+              className={`rounded p-1 transition-colors hover:bg-yellow-50 dark:hover:bg-yellow-900/30 ${
                 isFavorite
                   ? "text-yellow-500 hover:text-yellow-600"
                   : "text-gray-400 hover:text-yellow-500"
               }`}
             >
-              <span aria-hidden="true">{isFavorite ? "★" : "☆"}</span>
+              <Star className="size-3.5" fill={isFavorite ? "currentColor" : "none"} />
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setShowShareModal(true)}
+            aria-label={`Share ${game.name}`}
+            title="Share"
+            className="rounded p-1 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
+          >
+            <Share2 className="size-3.5" />
+          </button>
           {game.appid && (
             <Link
               href={`/share/${game.appid}`}
               target="_blank"
-              aria-label={`Share ${game.name}`}
-              title="Share"
-              className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
+              aria-label={`View share page for ${game.name}`}
+              title="View share page"
+              className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             >
-              <span aria-hidden="true">↗</span>
+              <ExternalLink className="size-3.5" />
             </Link>
           )}
           <button
@@ -99,24 +108,18 @@ export default function GameCard({
             disabled={refreshing}
             aria-label={`Refresh prices for ${game.name}`}
             title="Refresh prices"
-            className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
-            {refreshing ? (
-              <span className="inline-block animate-spin" aria-hidden="true">
-                ↻
-              </span>
-            ) : (
-              <span aria-hidden="true">↻</span>
-            )}
+            <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
           </button>
           <button
             type="button"
             onClick={() => onRemove(key)}
             aria-label={`Remove ${game.name}`}
             title="Remove game"
-            className="rounded p-1 text-gray-400 text-xs transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30"
+            className="rounded p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30"
           >
-            <span aria-hidden="true">✕</span>
+            <X className="size-3.5" />
           </button>
         </div>
       </div>
@@ -169,16 +172,6 @@ export default function GameCard({
             </time>
           </p>
         )}
-
-        {/* Share button */}
-        <button
-          type="button"
-          onClick={() => setShowShareModal(true)}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-gray-400 text-xs transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-        >
-          <span aria-hidden="true">📤</span>
-          Share
-        </button>
       </div>
 
       <ShareModal game={game} isOpen={showShareModal} onClose={() => setShowShareModal(false)} />
