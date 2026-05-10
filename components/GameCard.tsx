@@ -4,7 +4,7 @@ import { Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { type Game, STORES } from "@/lib/types";
-import { bestDeal, gameKey, timeAgo } from "@/lib/utils";
+import { bestDeal, formatReleaseDate, gameKey, parseReleaseDate, timeAgo } from "@/lib/utils";
 import BestDealBanner from "./BestDealBanner";
 import StorePriceList from "./StorePriceList";
 
@@ -31,6 +31,7 @@ export default function GameCard({
 }: Props) {
   const key = gameKey(game);
   const best = bestDeal(game.prices);
+  const releaseDate = game.releaseDate ? parseReleaseDate(game.releaseDate) : null;
 
   const visibleStores = STORES;
 
@@ -136,12 +137,12 @@ export default function GameCard({
                 game.name
               )}
             </h3>
-            {(game.releaseDate || game.comingSoon) && (
+            {(releaseDate || game.comingSoon) && (
               <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
                 {game.comingSoon && (
                   <Star className="mr-1 inline size-3 text-yellow-400" fill="currentColor" />
                 )}
-                {game.releaseDate ?? "Coming soon"}
+                {releaseDate ? formatReleaseDate(releaseDate) : "Coming soon"}
               </p>
             )}
           </div>

@@ -37,6 +37,19 @@ export function parseGameInput(
   return null;
 }
 
+export function parseReleaseDate(dateStr: string): Date | null {
+  // Reject vague strings like "2026", "Q3 2026", "TBA" — require a month name
+  if (!/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\b/i.test(dateStr)) return null;
+  const d = new Date(dateStr);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export function formatReleaseDate(date: Date): string {
+  return `${date.getDate()} ${MONTHS[date.getMonth()]}, ${date.getFullYear()}`;
+}
+
 export function bestDeal(
   prices: Partial<Record<string, { price?: string | null }>>,
 ): string | null {

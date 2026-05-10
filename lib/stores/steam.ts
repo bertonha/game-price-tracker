@@ -4,7 +4,7 @@ import { stripGamePrefix } from "@/lib/utils";
 export type SteamResult = { price: StorePrice; releaseDate?: string; comingSoon: boolean };
 
 const STEAM_COUNTRY = process.env.STEAM_COUNTRY ?? "BR";
-const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "portuguese";
+const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "english";
 
 const EXCLUDE_KEYWORDS = /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
 
