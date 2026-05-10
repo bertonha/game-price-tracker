@@ -60,7 +60,9 @@ export default function HomePage() {
   const [status, setStatus] = useState("");
   const [progress, setProgress] = useState<number | null>(null);
   const [hydrated, setHydrated] = useState(false);
-  const [sortOrder, setSortOrder] = useState<"priority" | "cheapest" | "expensive">("priority");
+  const [sortOrder, setSortOrder] = useState<
+    "priority" | "cheapest" | "expensive" | "release-date"
+  >("priority");
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [savedGamesQuery, setSavedGamesQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(() => {
@@ -74,6 +76,18 @@ export default function HomePage() {
   function prioritizeStarred(list: Game[]): Game[] {
     const starred = list.filter((g) => g.isFavorite);
     const others = list.filter((g) => !g.isFavorite);
+    return [...starred, ...others];
+  }
+
+  function sortByReleaseDateWithinStarGroups(list: Game[]): Game[] {
+    function byDate(a: Game, b: Game): number {
+      if (!a.releaseDate && !b.releaseDate) return 0;
+      if (!a.releaseDate) return 1;
+      if (!b.releaseDate) return -1;
+      return new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime();
+    }
+    const starred = list.filter((g) => g.isFavorite).sort(byDate);
+    const others = list.filter((g) => !g.isFavorite).sort(byDate);
     return [...starred, ...others];
   }
 
@@ -464,12 +478,14 @@ export default function HomePage() {
     return g.name.toLowerCase().includes(query) || g.appid.includes(query);
   });
 
-  const displayedGames =
-    sortOrder === "cheapest"
-      ? sortByPriceWithinStarGroups(searchFilteredGames, "asc")
-      : sortOrder === "expensive"
-        ? sortByPriceWithinStarGroups(searchFilteredGames, "desc")
-        : prioritizeStarred(searchFilteredGames);
+  function sortGames(list: Game[]) {
+    if (sortOrder === "cheapest") return sortByPriceWithinStarGroups(list, "asc");
+    if (sortOrder === "expensive") return sortByPriceWithinStarGroups(list, "desc");
+    if (sortOrder === "release-date") return sortByReleaseDateWithinStarGroups(list);
+    return prioritizeStarred(list);
+  }
+
+  const displayedGames = sortGames(searchFilteredGames);
 
   const hasActiveFilters =
     activeStores.size > 0 || showStarredOnly || savedGamesQuery.trim().length > 0;
@@ -669,6 +685,7 @@ export default function HomePage() {
           <option value="priority">Sort: Priority</option>
           <option value="cheapest">Sort: Cheapest first</option>
           <option value="expensive">Sort: Most expensive first</option>
+          <option value="release-date">Sort: Release date</option>
         </select>
         {games.length > 0 && (
           <span className="ml-auto text-gray-400 text-xs">
