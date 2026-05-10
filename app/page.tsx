@@ -341,6 +341,7 @@ export default function HomePage() {
                     onToggleFavorite={toggleFavorite}
                     refreshing={refreshingKeys.has(key)}
                     prioritizeImage={idx === 0}
+                    disabled={sortOrder !== "priority"}
                   />
                 );
               })}

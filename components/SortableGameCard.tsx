@@ -5,10 +5,15 @@ import { CSS } from "@dnd-kit/utilities";
 import GameCard from "@/components/GameCard";
 import { gameKey } from "@/lib/utils";
 
-export default function SortableGameCard(props: React.ComponentProps<typeof GameCard>) {
+interface SortableGameCardProps extends React.ComponentProps<typeof GameCard> {
+  disabled?: boolean;
+}
+
+export default function SortableGameCard({ disabled, ...props }: SortableGameCardProps) {
   const key = gameKey(props.game);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: key,
+    disabled,
   });
 
   return (
@@ -17,7 +22,10 @@ export default function SortableGameCard(props: React.ComponentProps<typeof Game
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={isDragging ? "z-10 opacity-50" : ""}
     >
-      <GameCard {...props} dragHandleProps={{ ...attributes, ...listeners }} />
+      <GameCard
+        {...props}
+        dragHandleProps={disabled ? undefined : { ...attributes, ...listeners }}
+      />
     </div>
   );
 }
