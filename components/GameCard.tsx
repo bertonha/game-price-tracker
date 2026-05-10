@@ -1,8 +1,7 @@
 "use client";
 
-import { ExternalLink, RefreshCw, Share2, Star, X } from "lucide-react";
+import { RefreshCw, Share2, Star, X } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { type Game, STORES } from "@/lib/types";
 import { bestDeal, formatReleaseDate, gameKey, timeAgo } from "@/lib/utils";
 import BestDealBanner from "./BestDealBanner";
@@ -90,17 +89,7 @@ export default function GameCard({
           >
             <Share2 className="size-3.5" />
           </button>
-          {game.appid && (
-            <Link
-              href={`/share/${game.appid}`}
-              target="_blank"
-              aria-label={`View share page for ${game.name}`}
-              title="View share page"
-              className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-            >
-              <ExternalLink className="size-3.5" />
-            </Link>
-          )}
+
           <button
             type="button"
             onClick={() => onRefresh(key)}

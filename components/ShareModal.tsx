@@ -1,5 +1,7 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { type MouseEvent, useEffect, useState } from "react";
 import type { Game, StoreId } from "@/lib/types";
 
@@ -292,6 +294,20 @@ export default function ShareModal({ game, isOpen, onClose }: Props) {
             );
           })}
         </div>
+
+        {game.appid && (
+          <div className="mt-3 border-gray-100 border-t pt-3 dark:border-gray-800">
+            <Link
+              href={`/share/${game.appid}`}
+              target="_blank"
+              onClick={onClose}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-3 py-2 font-medium text-gray-600 text-sm transition-colors hover:border-gray-400 hover:bg-gray-50 hover:text-gray-900 dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800 dark:hover:text-white"
+            >
+              <ExternalLink className="size-3.5" />
+              View share page
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
