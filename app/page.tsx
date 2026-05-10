@@ -12,11 +12,13 @@ import { arrayMove, rectSortingStrategy, SortableContext } from "@dnd-kit/sortab
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import SearchBar from "@/components/SearchBar";
+import ShareModal from "@/components/ShareModal";
 import SortableGameCard from "@/components/SortableGameCard";
 import StoreFilter from "@/components/StoreFilter";
 import { useCollection } from "@/hooks/useCollection";
 import { type SortOrder, sortGames } from "@/lib/sort";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { Game } from "@/lib/types";
 import { bestDeal, gameKey } from "@/lib/utils";
 
 export default function HomePage() {
@@ -40,6 +42,7 @@ export default function HomePage() {
     signOut,
   } = useCollection(supabase);
 
+  const [shareGame, setShareGame] = useState<Game | null>(null);
   const [activeStores, setActiveStores] = useState<Set<string>>(new Set());
   const [sortOrder, setSortOrder] = useState<SortOrder>("priority");
   const [showStarredOnly, setShowStarredOnly] = useState(false);
@@ -337,6 +340,7 @@ export default function HomePage() {
                     game={game}
                     onRemove={removeGame}
                     onRefresh={refreshOne}
+                    onShare={setShareGame}
                     isFavorite={game.isFavorite}
                     onToggleFavorite={toggleFavorite}
                     refreshing={refreshingKeys.has(key)}
@@ -349,6 +353,8 @@ export default function HomePage() {
           </SortableContext>
         </DndContext>
       )}
+
+      <ShareModal game={shareGame} isOpen={shareGame !== null} onClose={() => setShareGame(null)} />
     </main>
   );
 }

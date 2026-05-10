@@ -3,17 +3,16 @@
 import { ExternalLink, RefreshCw, Share2, Star, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 import { type Game, STORES } from "@/lib/types";
 import { bestDeal, formatReleaseDate, gameKey, timeAgo } from "@/lib/utils";
 import BestDealBanner from "./BestDealBanner";
-import ShareModal from "./ShareModal";
 import StorePriceList from "./StorePriceList";
 
 interface Props {
   game: Game;
   onRemove: (key: string) => void;
   onRefresh: (key: string) => void;
+  onShare: (game: Game) => void;
   isFavorite?: boolean;
   onToggleFavorite?: (appid: string) => void;
   refreshing?: boolean;
@@ -25,13 +24,13 @@ export default function GameCard({
   game,
   onRemove,
   onRefresh,
+  onShare,
   isFavorite,
   onToggleFavorite,
   refreshing,
   prioritizeImage = false,
   dragHandleProps,
 }: Props) {
-  const [showShareModal, setShowShareModal] = useState(false);
   const key = gameKey(game);
   const best = bestDeal(game.prices);
   const releaseDate = game.releaseDate ? new Date(game.releaseDate) : null;
@@ -84,7 +83,7 @@ export default function GameCard({
           )}
           <button
             type="button"
-            onClick={() => setShowShareModal(true)}
+            onClick={() => onShare(game)}
             aria-label={`Share ${game.name}`}
             title="Share"
             className="rounded p-1 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/30"
@@ -173,8 +172,6 @@ export default function GameCard({
           </p>
         )}
       </div>
-
-      <ShareModal game={game} isOpen={showShareModal} onClose={() => setShowShareModal(false)} />
     </article>
   );
 }

@@ -4,7 +4,7 @@ import { type MouseEvent, useEffect, useState } from "react";
 import type { Game, StoreId } from "@/lib/types";
 
 interface Props {
-  game: Game;
+  game: Game | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -25,6 +25,8 @@ export default function ShareModal({ game, isOpen, onClose }: Props) {
       document.body.style.overflow = "";
     };
   }, [isOpen, onClose]);
+
+  if (!isOpen || !game) return null;
 
   const handleWhatsApp = (
     e: MouseEvent<HTMLButtonElement>,
@@ -61,8 +63,6 @@ export default function ShareModal({ game, isOpen, onClose }: Props) {
       onClose();
     }, 1000);
   };
-
-  if (!isOpen) return null;
 
   const stores: { id: StoreId; name: string; color: string }[] = [
     { id: "steam", name: "Steam BR", color: "#1b2838" },
