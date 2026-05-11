@@ -97,7 +97,11 @@ export default function ShareModal({ game, isOpen, onClose }: Props) {
     const bestLine = best ? `⭐Best price ${best.price} on ${best.platform}!\n\n` : "";
 
     const text = `Check out ${game.name}!\n\n${bestLine}---\n${storePrices}\n${shareUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    const encoded = encodeURIComponent(text).replace(/%20/g, "+");
+    window.open(
+      `https://api.whatsapp.com/send/?text=${encoded}&type=custom_url&app_absent=0`,
+      "_blank",
+    );
     onClose();
   }
 
