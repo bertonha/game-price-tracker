@@ -49,7 +49,7 @@ export default async function SharePage({ params }: { params: Promise<{ appid: s
         <div className="flex flex-col gap-4 rounded-b-xl border border-gray-200 border-t-0 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
           <h1 className="font-semibold text-xl leading-tight">{game.name}</h1>
 
-          <ShareGamePrices appid={game.appid} name={game.name} />
+          <ShareGamePrices appid={game.appid} name={game.name} img={game.img} />
 
           {/* Back link */}
           <Link href="/" className="mt-2 text-blue-500 text-sm hover:underline">
