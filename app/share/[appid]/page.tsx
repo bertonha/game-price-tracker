@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -22,6 +23,33 @@ async function getGameDetails(appid: string) {
     appid,
     name: appData.name as string,
     img: appData.header_image as string,
+  };
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ appid: string }>;
+}): Promise<Metadata> {
+  const { appid } = await params;
+  const game = await getGameDetails(appid);
+  if (!game) return {};
+
+  return {
+    title: `${game.name} | Game Price Tracker`,
+    description: `Check prices for ${game.name} on Steam BR, Nuuvem, and Instant Gaming.`,
+    openGraph: {
+      title: game.name,
+      description: `Check prices for ${game.name} on Steam BR, Nuuvem, and Instant Gaming.`,
+      images: [{ url: game.img, width: 460, height: 215, alt: game.name }],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: game.name,
+      description: `Check prices for ${game.name} on Steam BR, Nuuvem, and Instant Gaming.`,
+      images: [game.img],
+    },
   };
 }
 
