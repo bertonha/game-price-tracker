@@ -4,7 +4,7 @@ import { Check, ClipboardCopy, ExternalLink, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { findBestPrice } from "@/lib/share";
-import type { Game } from "@/lib/types";
+import { type Game, STORES } from "@/lib/types";
 
 interface Props {
   game: Game | null;
@@ -88,9 +88,15 @@ export default function ShareModal({ game, isOpen, onClose }: Props) {
   function handleWhatsApp() {
     if (!game) return;
     const best = findBestPrice(game);
-    const text = best
-      ? `Check out ${game.name} for ${best.price} on ${best.platform}!\n${shareUrl}`
-      : `Check out the best prices for ${game.name}!\n${shareUrl}`;
+
+    const storePrices = STORES.map((store) => {
+      const price = game.prices[store.id]?.price;
+      return `${store.name}: ${price ?? "---"}`;
+    }).join("\n");
+
+    const bestLine = best ? `⭐Best price ${best.price} on ${best.platform}!\n\n` : "";
+
+    const text = `Check out ${game.name}!\n\n${bestLine}---\n${storePrices}\n${shareUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
     onClose();
   }
