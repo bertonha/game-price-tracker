@@ -33,7 +33,7 @@
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "lefthook": "^2.1.5",
+    "lefthook": "^2.1.8",
     "tailwindcss": "^4",
     "typescript": "^6.0.2",
     "vitest": "^4.1.4"
