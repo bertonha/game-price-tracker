@@ -42,16 +42,16 @@ A Next.js (App Router) application that compares game prices across **Steam BR**
 - **Hydration:** Handled carefully to support both guest (localStorage) and auth (Supabase) states.
 
 ## 5. Commands & Workflows
-- **Development Server:** `npm run dev` (Accessible at `http://localhost:3000`)
-- **Building:** `npm run build` and `npm start`
-- **Linting & Type-Check:** `npm run lint` (runs `biome check . && tsc --noEmit`)
-- **Formatting:** `npm run format` (runs `biome format --write .`)
-- **Testing:** `npm test` or `npm run test` (runs Vitest)
+- **Development Server:** `pnpm dev` (Accessible at `http://localhost:3000`)
+- **Building:** `pnpm build` and `pnpm start`
+- **Linting & Type-Check:** `pnpm lint` (runs `biome check . && tsc --noEmit`)
+- **Formatting:** `pnpm format` (runs `biome format --write .`)
+- **Testing:** `pnpm test` (runs Vitest)
 - **Pre-commit Workflow:** Managed via `lefthook`. Pre-commit runs Biome check and typecheck; pre-push runs tests. Always ensure compliance before committing.
 
 ## 6. After Editing Code
 
-Always run `npm run lint` after finishing code edits and fix any issues before reporting the task as done.
+Always run `pnpm lint` after finishing code edits and fix any issues before reporting the task as done.
 
 ## 7. Related Documentation
 - `README.md`: Basic setup and environment variable guide.

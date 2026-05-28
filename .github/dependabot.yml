@@ -1,6 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
+    # Dependabot does not support pnpm natively; keeping "npm" ecosystem with pnpm-lock.yaml present
     directory: "/"
     schedule:
       interval: "weekly"

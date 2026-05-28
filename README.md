@@ -23,13 +23,13 @@ cd game-price-tracker
 ### 2. Install dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 3. Run the development server
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -37,8 +37,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### 4. Build for production
 
 ```bash
-npm run build
-npm start
+pnpm build
+pnpm start
 ```
 
 ## Environment Variables

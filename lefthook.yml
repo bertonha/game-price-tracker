@@ -3,7 +3,7 @@ pre-commit:
   commands:
     biome:
       glob: "*.{ts,tsx,js,jsx,json,css}"
-      exclude: "package-lock.json"
+      exclude: "pnpm-lock.yaml"
       run: npx biome check --write {staged_files}
       stage_fixed: true
     typecheck:
@@ -12,4 +12,4 @@ pre-commit:
 pre-push:
   commands:
     test:
-      run: npm test
+      run: pnpm test
