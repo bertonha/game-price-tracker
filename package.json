@@ -22,8 +22,8 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@supabase/ssr": "^0.12.0",
-    "@supabase/supabase-js": "^2.108.1",
-    "lucide-react": "^1.18.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "lucide-react": "^1.20.0",
     "next": "^16.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
@@ -37,6 +37,6 @@
     "lefthook": "^2.1.9",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   }
 }
