@@ -5,6 +5,8 @@ interface Props {
   onToggleStore: (id: string) => void;
   showStarredOnly: boolean;
   onShowStarredOnlyChange: (v: boolean) => void;
+  starredFirst: boolean;
+  onStarredFirstChange: (v: boolean) => void;
   savedGamesQuery: string;
   onSavedGamesQueryChange: (v: string) => void;
   filtersOpen: boolean;
@@ -16,6 +18,8 @@ export default function FiltersPanel({
   onToggleStore,
   showStarredOnly,
   onShowStarredOnlyChange,
+  starredFirst,
+  onStarredFirstChange,
   savedGamesQuery,
   onSavedGamesQueryChange,
   filtersOpen,
@@ -26,6 +30,14 @@ export default function FiltersPanel({
     onFiltersOpenChange(next);
     try {
       localStorage.setItem("filtersOpen", String(next));
+    } catch {}
+  }
+
+  function handleStarredFirstToggle() {
+    const next = !starredFirst;
+    onStarredFirstChange(next);
+    try {
+      localStorage.setItem("starredFirst", String(next));
     } catch {}
   }
 
@@ -89,6 +101,19 @@ export default function FiltersPanel({
                   }`}
                 >
                   Starred only
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStarredFirstToggle}
+                  aria-pressed={starredFirst}
+                  title="When on, starred games are sorted before the rest"
+                  className={`rounded-full border px-3 py-1.5 font-medium text-xs transition-all ${
+                    starredFirst
+                      ? "border-gray-900 bg-gray-900 text-white shadow-gray-900/15 shadow-sm dark:border-white dark:bg-white dark:text-gray-900"
+                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  ★ Starred first
                 </button>
               </div>
             </div>

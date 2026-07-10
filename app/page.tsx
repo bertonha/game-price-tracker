@@ -28,6 +28,14 @@ export default function HomePage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  const [starredFirst, setStarredFirst] = useState(() => {
+    try {
+      return localStorage.getItem("starredFirst") !== "false";
+    } catch {
+      return true;
+    }
+  });
+
   const {
     games,
     persistGames,
@@ -43,7 +51,7 @@ export default function HomePage() {
     toggleFavorite,
     clearAll,
     signOut,
-  } = useCollection(supabase);
+  } = useCollection(supabase, { starredFirst });
 
   const [shareGame, setShareGame] = useState<Game | null>(null);
   const [activeStores, setActiveStores] = useState<Set<string>>(new Set());
@@ -83,6 +91,7 @@ export default function HomePage() {
       savedGamesQuery,
     ),
     sortOrder,
+    !starredFirst,
   );
 
   const hasActiveFilters =
@@ -107,6 +116,8 @@ export default function HomePage() {
         onToggleStore={toggleStore}
         showStarredOnly={showStarredOnly}
         onShowStarredOnlyChange={setShowStarredOnly}
+        starredFirst={starredFirst}
+        onStarredFirstChange={setStarredFirst}
         savedGamesQuery={savedGamesQuery}
         onSavedGamesQueryChange={setSavedGamesQuery}
         filtersOpen={filtersOpen}

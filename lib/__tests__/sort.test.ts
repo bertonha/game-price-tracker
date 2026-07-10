@@ -134,4 +134,27 @@ describe("sortGames", () => {
   it("expensive sorts by descending price within star groups", () => {
     expect(names(sortGames([a, b, c], "expensive"))).toEqual(["B", "C", "A"]);
   });
+
+  describe("with ignoreStarred", () => {
+    it("priority keeps the original order", () => {
+      expect(names(sortGames([a, b, c], "priority", true))).toEqual(["A", "B", "C"]);
+    });
+
+    it("cheapest sorts by price across all games", () => {
+      expect(names(sortGames([c, a, b], "cheapest", true))).toEqual(["B", "A", "C"]);
+    });
+
+    it("expensive sorts by price across all games", () => {
+      expect(names(sortGames([a, b, c], "expensive", true))).toEqual(["C", "A", "B"]);
+    });
+
+    it("release-date sorts by date across all games", () => {
+      const starredLate = makeGame("StarLate", { isFavorite: true, releaseDate: "2024-01-01" });
+      const earlyNormal = makeGame("EarlyNormal", { releaseDate: "2015-01-01" });
+      expect(names(sortGames([starredLate, earlyNormal], "release-date", true))).toEqual([
+        "EarlyNormal",
+        "StarLate",
+      ]);
+    });
+  });
 });

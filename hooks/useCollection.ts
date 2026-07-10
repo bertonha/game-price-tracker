@@ -15,7 +15,10 @@ import {
 import type { Game, SteamSuggestion } from "@/lib/types";
 import { gameKey } from "@/lib/utils";
 
-export function useCollection(supabase: ReturnType<typeof getSupabaseBrowserClient>) {
+export function useCollection(
+  supabase: ReturnType<typeof getSupabaseBrowserClient>,
+  { starredFirst = true }: { starredFirst?: boolean } = {},
+) {
   const router = useRouter();
   const userIdRef = useRef<string | null>(null);
   const refreshAllRef = useRef<(force?: boolean) => void>(() => {});
@@ -299,7 +302,7 @@ export function useCollection(supabase: ReturnType<typeof getSupabaseBrowserClie
     const updatedGame = { ...game, isFavorite: !game.isFavorite };
     const nextGames = [...games];
     nextGames[gameIndex] = updatedGame;
-    const normalizedGames = prioritizeStarred(nextGames);
+    const normalizedGames = starredFirst ? prioritizeStarred(nextGames) : nextGames;
 
     setGames(normalizedGames);
     saveGames(normalizedGames);
