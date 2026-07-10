@@ -47,7 +47,8 @@ export default function CollectionToolbar({
         <option value="priority">Sort: Priority</option>
         <option value="cheapest">Sort: Cheapest first</option>
         <option value="expensive">Sort: Most expensive first</option>
-        <option value="release-date">Sort: Release date</option>
+        <option value="release-newest">Sort: Newest first</option>
+        <option value="release-oldest">Sort: Oldest first</option>
       </select>
       {gamesCount > 0 && (
         <span className="ml-auto text-gray-400 text-xs">

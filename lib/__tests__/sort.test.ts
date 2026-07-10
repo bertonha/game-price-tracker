@@ -90,16 +90,31 @@ describe("sortByReleaseDateWithinStarGroups", () => {
   const late = makeGame("Late", { releaseDate: "2024-06-15" });
   const noDate = makeGame("NoDate");
 
-  it("sorts by release date ascending", () => {
-    expect(names(sortByReleaseDateWithinStarGroups([late, noDate, early]))).toEqual([
+  it("sorts oldest first (asc)", () => {
+    expect(names(sortByReleaseDateWithinStarGroups([late, noDate, early], "asc"))).toEqual([
       "Early",
       "Late",
       "NoDate",
     ]);
   });
 
-  it("pushes games with no release date to the end", () => {
-    expect(names(sortByReleaseDateWithinStarGroups([noDate, early]))).toEqual(["Early", "NoDate"]);
+  it("sorts newest first (desc)", () => {
+    expect(names(sortByReleaseDateWithinStarGroups([early, noDate, late], "desc"))).toEqual([
+      "Late",
+      "Early",
+      "NoDate",
+    ]);
+  });
+
+  it("pushes games with no release date to the end in both directions", () => {
+    expect(names(sortByReleaseDateWithinStarGroups([noDate, early], "asc"))).toEqual([
+      "Early",
+      "NoDate",
+    ]);
+    expect(names(sortByReleaseDateWithinStarGroups([noDate, early], "desc"))).toEqual([
+      "Early",
+      "NoDate",
+    ]);
   });
 
   it("keeps starred games ahead of non-starred", () => {
@@ -108,7 +123,7 @@ describe("sortByReleaseDateWithinStarGroups", () => {
       releaseDate: "2024-01-01",
     });
     const earlyNormal = makeGame("EarlyNormal", { releaseDate: "2015-01-01" });
-    expect(names(sortByReleaseDateWithinStarGroups([earlyNormal, starredLate]))).toEqual([
+    expect(names(sortByReleaseDateWithinStarGroups([earlyNormal, starredLate], "asc"))).toEqual([
       "StarLate",
       "EarlyNormal",
     ]);
@@ -148,12 +163,21 @@ describe("sortGames", () => {
       expect(names(sortGames([a, b, c], "expensive", true))).toEqual(["C", "A", "B"]);
     });
 
-    it("release-date sorts by date across all games", () => {
+    it("release-oldest sorts by date across all games", () => {
       const starredLate = makeGame("StarLate", { isFavorite: true, releaseDate: "2024-01-01" });
       const earlyNormal = makeGame("EarlyNormal", { releaseDate: "2015-01-01" });
-      expect(names(sortGames([starredLate, earlyNormal], "release-date", true))).toEqual([
+      expect(names(sortGames([starredLate, earlyNormal], "release-oldest", true))).toEqual([
         "EarlyNormal",
         "StarLate",
+      ]);
+    });
+
+    it("release-newest sorts by descending date across all games", () => {
+      const starredEarly = makeGame("StarEarly", { isFavorite: true, releaseDate: "2015-01-01" });
+      const lateNormal = makeGame("LateNormal", { releaseDate: "2024-01-01" });
+      expect(names(sortGames([starredEarly, lateNormal], "release-newest", true))).toEqual([
+        "LateNormal",
+        "StarEarly",
       ]);
     });
   });

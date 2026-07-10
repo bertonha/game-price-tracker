@@ -43,21 +43,29 @@ export function sortByPriceWithinStarGroups(
   return sortWithinStarGroups(list, byPrice, ignoreStarred);
 }
 
-export function sortByReleaseDateWithinStarGroups(list: Game[], ignoreStarred = false): Game[] {
+export function sortByReleaseDateWithinStarGroups(
+  list: Game[],
+  direction: "asc" | "desc",
+  ignoreStarred = false,
+): Game[] {
   function byDate(a: Game, b: Game): number {
     if (!a.releaseDate && !b.releaseDate) return 0;
     if (!a.releaseDate) return 1;
     if (!b.releaseDate) return -1;
-    return new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime();
+    const diff = new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime();
+    return direction === "asc" ? diff : -diff;
   }
   return sortWithinStarGroups(list, byDate, ignoreStarred);
 }
 
-export type SortOrder = "priority" | "cheapest" | "expensive" | "release-date";
+export type SortOrder = "priority" | "cheapest" | "expensive" | "release-newest" | "release-oldest";
 
 export function sortGames(list: Game[], sortOrder: SortOrder, ignoreStarred = false): Game[] {
   if (sortOrder === "cheapest") return sortByPriceWithinStarGroups(list, "asc", ignoreStarred);
   if (sortOrder === "expensive") return sortByPriceWithinStarGroups(list, "desc", ignoreStarred);
-  if (sortOrder === "release-date") return sortByReleaseDateWithinStarGroups(list, ignoreStarred);
+  if (sortOrder === "release-newest")
+    return sortByReleaseDateWithinStarGroups(list, "desc", ignoreStarred);
+  if (sortOrder === "release-oldest")
+    return sortByReleaseDateWithinStarGroups(list, "asc", ignoreStarred);
   return ignoreStarred ? list : prioritizeStarred(list);
 }
