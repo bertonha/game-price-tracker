@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   prioritizeStarred,
+  sortByDiscountWithinStarGroups,
   sortByPriceWithinStarGroups,
   sortByReleaseDateWithinStarGroups,
   sortGames,
@@ -180,5 +181,83 @@ describe("sortGames", () => {
         "StarEarly",
       ]);
     });
+  });
+});
+
+describe("sortByDiscountWithinStarGroups", () => {
+  function discounted(
+    name: string,
+    steamList: string,
+    best: string,
+    overrides: Partial<Game> = {},
+  ) {
+    return makeGame(name, {
+      prices: {
+        steam: { price: steamList, basePrice: steamList, url: "x" },
+        nuuvem: { price: best, url: "x" },
+      },
+      ...overrides,
+    });
+  }
+
+  const half = discounted("Half", "R$ 100,00", "R$ 50,00"); // 50%
+  const quarter = discounted("Quarter", "R$ 100,00", "R$ 75,00"); // 25%
+  const deep = discounted("Deep", "R$ 200,00", "R$ 20,00"); // 90%
+  const fullPrice = makeGame("FullPrice", {
+    prices: { steam: { price: "R$ 100,00", basePrice: "R$ 100,00", url: "x" } },
+  });
+
+  it("puts the deepest discount first", () => {
+    expect(names(sortByDiscountWithinStarGroups([quarter, deep, half]))).toEqual([
+      "Deep",
+      "Half",
+      "Quarter",
+    ]);
+  });
+
+  it("pushes games with no discount to the end", () => {
+    expect(names(sortByDiscountWithinStarGroups([fullPrice, quarter, deep]))).toEqual([
+      "Deep",
+      "Quarter",
+      "FullPrice",
+    ]);
+  });
+
+  it("ranks by discount, not by absolute price", () => {
+    // Deep is R$ 20,00 off a R$ 200,00 list; Half is cheaper in absolute terms
+    // only relative to its own list price.
+    const cheapButShallow = discounted("CheapShallow", "R$ 12,00", "R$ 11,00"); // 8%
+    expect(names(sortByDiscountWithinStarGroups([cheapButShallow, half]))).toEqual([
+      "Half",
+      "CheapShallow",
+    ]);
+  });
+
+  it("keeps starred games ahead of non-starred", () => {
+    const starredShallow = discounted("StarShallow", "R$ 100,00", "R$ 90,00", {
+      isFavorite: true,
+    });
+    expect(names(sortByDiscountWithinStarGroups([deep, starredShallow]))).toEqual([
+      "StarShallow",
+      "Deep",
+    ]);
+  });
+
+  it("sorts across all games when starred are ignored", () => {
+    const starredShallow = discounted("StarShallow", "R$ 100,00", "R$ 90,00", {
+      isFavorite: true,
+    });
+    expect(names(sortByDiscountWithinStarGroups([starredShallow, deep], true))).toEqual([
+      "Deep",
+      "StarShallow",
+    ]);
+  });
+
+  it("is reachable through sortGames", () => {
+    expect(names(sortGames([quarter, deep, half], "best-discount", true))).toEqual([
+      "Deep",
+      "Half",
+      "Quarter",
+    ]);
   });
 });

@@ -1,4 +1,5 @@
 import type { Game } from "@/lib/types";
+import { bestDealSavings, parsePrice } from "@/lib/utils";
 
 export function prioritizeStarred(list: Game[]): Game[] {
   const starred = list.filter((g) => g.isFavorite);
@@ -20,9 +21,8 @@ function sortWithinStarGroups(
 function minPrice(game: Game): number {
   let min = Number.POSITIVE_INFINITY;
   for (const info of Object.values(game.prices)) {
-    if (!info?.price || info.price === "N/A") continue;
-    const n = parseFloat(info.price.replace(/[^0-9.,]/g, "").replace(",", "."));
-    if (!Number.isNaN(n) && n < min) min = n;
+    const n = parsePrice(info?.price);
+    if (n !== null && n < min) min = n;
   }
   return min;
 }
@@ -58,10 +58,31 @@ export function sortByReleaseDateWithinStarGroups(
   return sortWithinStarGroups(list, byDate, ignoreStarred);
 }
 
-export type SortOrder = "priority" | "cheapest" | "expensive" | "release-newest" | "release-oldest";
+/** Orders by how far each game's best deal sits below Steam's list price,
+ *  deepest discount first. Games with nothing to compare go last. */
+export function sortByDiscountWithinStarGroups(list: Game[], ignoreStarred = false): Game[] {
+  function byDiscount(a: Game, b: Game): number {
+    const da = bestDealSavings(a.prices);
+    const db = bestDealSavings(b.prices);
+    if (da === null && db === null) return 0;
+    if (da === null) return 1;
+    if (db === null) return -1;
+    return db - da;
+  }
+  return sortWithinStarGroups(list, byDiscount, ignoreStarred);
+}
+
+export type SortOrder =
+  | "priority"
+  | "cheapest"
+  | "expensive"
+  | "best-discount"
+  | "release-newest"
+  | "release-oldest";
 
 export function sortGames(list: Game[], sortOrder: SortOrder, ignoreStarred = false): Game[] {
   if (sortOrder === "cheapest") return sortByPriceWithinStarGroups(list, "asc", ignoreStarred);
+  if (sortOrder === "best-discount") return sortByDiscountWithinStarGroups(list, ignoreStarred);
   if (sortOrder === "expensive") return sortByPriceWithinStarGroups(list, "desc", ignoreStarred);
   if (sortOrder === "release-newest")
     return sortByReleaseDateWithinStarGroups(list, "desc", ignoreStarred);
