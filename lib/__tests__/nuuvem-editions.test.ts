@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { parseEditionCards } from "@/lib/stores/nuuvem";
 
 /** Trimmed from a real https://www.nuuvem.com/br-pt/item/<slug>/editions response. */
-function card(name: string, slug: string, priceCents: number, extra = "") {
+const steamDrm = `<ul class="drm-activation"><li class="drm-activation__item drm-activation--steam"><span>Steam</span></li></ul>`;
+const xboxDrm = `<ul class="drm-activation"><li class="drm-activation__item drm-activation--microsoft"><span>Xbox</span></li></ul>`;
+
+function card(name: string, slug: string, priceCents: number, extra = steamDrm) {
   return `
     <a title="${name}" data-action="click-&gt;default-tracker#fireClickedEvent" data-default-tracker-product-tracking-data-param="{&quot;name&quot;:&quot;${name}&quot;,&quot;url&quot;:&quot;https://www.nuuvem.com/br-pt/item/${slug}&quot;}" href="https://www.nuuvem.com/br-pt/item/${slug}">
       <article class="product__available game-card game-card--horizontal" data-product-sku="23157">
@@ -98,5 +101,36 @@ describe("parseEditionCards", () => {
     // The product page ships the frame empty; editions arrive from its src URL.
     const html = `<turbo-frame loading="lazy" id="editions_product_x" src="/br-pt/item/x/editions"></turbo-frame>`;
     expect(parseEditionCards(html, BASE)).toBeUndefined();
+  });
+});
+
+describe("parseEditionCards — platform filtering", () => {
+  // Nuuvem lists the same edition for several storefronts under near-identical
+  // names. Steam app 2417610's Xbox edition was being offered as a PC price.
+  const MGS = "METAL GEAR SOLID Δ: SNAKE EATER";
+
+  it("keeps the Steam edition and drops the Xbox one", () => {
+    const html = frame(
+      card(`${MGS} - Digital Deluxe Edition`, "mgs-deluxe-edition", 33990, steamDrm) +
+        card(`${MGS} Digital Deluxe Edition`, "mgs-digital-deluxe-edition", 39950, xboxDrm),
+    );
+    expect(parseEditionCards(html, MGS)).toEqual([
+      {
+        name: "Digital Deluxe Edition",
+        price: "R$ 339,90",
+        url: "https://www.nuuvem.com/br-pt/item/mgs-deluxe-edition",
+      },
+    ]);
+  });
+
+  it("returns undefined when every edition is for another platform", () => {
+    const html = frame(card(`${MGS} Digital Deluxe Edition`, "mgs-xbox", 39950, xboxDrm));
+    expect(parseEditionCards(html, MGS)).toBeUndefined();
+  });
+
+  it("keeps a card that declares no DRM at all", () => {
+    // Fail open: a markup change should not silently empty the edition list.
+    const html = frame(card(`${MGS} Deluxe Edition`, "mgs-deluxe", 33990, ""));
+    expect(parseEditionCards(html, MGS)).toHaveLength(1);
   });
 });

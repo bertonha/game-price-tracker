@@ -35,6 +35,16 @@ export function decodePrice(encoded: string): string | null {
   }
 }
 
+/** Nuuvem sells the same game on several storefronts and lists them side by
+ *  side under near-identical names — "METAL GEAR SOLID Δ: SNAKE EATER Digital
+ *  Deluxe Edition" exists for both Steam and Xbox, and only the DRM badge
+ *  tells them apart. A card declaring no DRM at all is kept, so a markup
+ *  change degrades to the previous behaviour rather than emptying the list. */
+function isSteamCard(cardHtml: string): boolean {
+  const drm = cardHtml.match(/drm-activation--[a-z]+/g);
+  return !drm || drm.includes("drm-activation--steam");
+}
+
 /** Extract the base game's price from a `product-buy` block — the markup the
  *  `/item/info/` endpoint returns on its own and the product page embeds.
  *  Scoping to that block keeps a DLC or edition card further down the product
@@ -68,6 +78,7 @@ async function autocomplete(name: string): Promise<string | null> {
     for (const p of data.products) {
       const titleMatch = p.html.match(/<h1[^>]*title="([^"]+)"/);
       if (!titleMatch || STORE_EXCLUDE.test(p.html)) continue;
+      if (!isSteamCard(p.html)) continue;
 
       const score = matchScore(name, titleMatch[1]);
       if (score > bestScore) {
@@ -103,6 +114,7 @@ export function parseEditionCards(html: string, baseName: string): Edition[] | u
 
     const url = attrs.match(/href="([^"]+)"/)?.[1];
     if (!url?.includes("/item/") || seen.has(url)) continue;
+    if (!isSteamCard(body)) continue;
 
     // The anchor's title attribute is the cleanest source; the card heading is
     // a fallback in case the markup drops it.
