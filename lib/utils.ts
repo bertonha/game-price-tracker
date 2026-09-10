@@ -50,18 +50,37 @@ export function formatReleaseDate(date: Date): string {
   return `${date.getDate()} ${MONTHS[date.getMonth()]}, ${date.getFullYear()}`;
 }
 
-export function bestDeal(
-  prices: Partial<Record<string, { price?: string | null }>>,
-): string | null {
+export function parsePrice(priceStr: string | null | undefined): number | null {
+  if (!priceStr || priceStr === "N/A") return null;
+  const num = parseFloat(priceStr.replace(/[^\d.,]/g, "").replace(",", "."));
+  return Number.isNaN(num) ? null : num;
+}
+
+type PriceInfo = { price?: string | null; basePrice?: string | null };
+
+export function bestDeal(prices: Partial<Record<string, PriceInfo>>): string | null {
   let bestVal: number | null = null;
   let bestStore: string | null = null;
   for (const [store, info] of Object.entries(prices)) {
-    if (!info?.price || info.price === "N/A") continue;
-    const n = parseFloat(info.price.replace(/[^0-9.,]/g, "").replace(",", "."));
-    if (!Number.isNaN(n) && (bestVal === null || n < bestVal)) {
+    const n = parsePrice(info?.price);
+    if (n !== null && (bestVal === null || n < bestVal)) {
       bestVal = n;
       bestStore = store;
     }
   }
   return bestStore;
+}
+
+/** How far below Steam's official list price the best deal sits, as a whole
+ *  percentage. Returns null when there is nothing to compare, or when the best
+ *  deal is not actually cheaper than the list price. */
+export function bestDealSavings(prices: Partial<Record<string, PriceInfo>>): number | null {
+  const store = bestDeal(prices);
+  if (!store) return null;
+  const best = parsePrice(prices[store]?.price);
+  const steam = prices.steam;
+  const list = parsePrice(steam?.basePrice) ?? parsePrice(steam?.price);
+  if (best === null || list === null || list <= 0) return null;
+  const percent = Math.round((1 - best / list) * 100);
+  return percent > 0 ? percent : null;
 }

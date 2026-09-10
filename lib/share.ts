@@ -1,11 +1,6 @@
 import type { Game, StoreId } from "@/lib/types";
 import { STORES } from "@/lib/types";
-
-export function parsePrice(priceStr: string | null): number | null {
-  if (!priceStr || priceStr === "N/A") return null;
-  const num = parseFloat(priceStr.replace(/[^\d.,]/g, "").replace(",", "."));
-  return Number.isNaN(num) ? null : num;
-}
+import { parsePrice } from "@/lib/utils";
 
 export function findBestPrice(
   game: Game,

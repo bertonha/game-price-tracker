@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildWhatsAppText, findBestPrice, parsePrice } from "@/lib/share";
+import { buildWhatsAppText, findBestPrice } from "@/lib/share";
 import type { Game } from "@/lib/types";
+import { parsePrice } from "@/lib/utils";
 
 const BASE_GAME: Game = {
   appid: "1234",

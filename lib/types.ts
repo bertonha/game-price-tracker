@@ -6,6 +6,9 @@ export interface Edition {
 
 export interface StorePrice {
   price: string | null;
+  /** The store's regular list price, when the store is running a discount.
+   *  Used as the baseline for the best-deal savings badge. */
+  basePrice?: string | null;
   url: string | null;
   editions?: Edition[];
 }

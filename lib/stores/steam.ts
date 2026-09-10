@@ -34,7 +34,7 @@ export async function fetchSteam(appid: string, name: string): Promise<SteamResu
       {
         data?: {
           is_free?: boolean;
-          price_overview?: { final_formatted: string };
+          price_overview?: { final_formatted: string; initial_formatted?: string };
           package_groups?: {
             subs?: {
               packageid: number;
@@ -61,8 +61,14 @@ export async function fetchSteam(appid: string, name: string): Promise<SteamResu
       return { price: { price: "Free to Play", url: storeUrl }, releaseDate, comingSoon };
 
     const overview = data.price_overview;
+    // `initial_formatted` is only populated while the game is discounted;
+    // otherwise the list price is the price being charged.
     const base: StorePrice = overview
-      ? { price: overview.final_formatted, url: storeUrl }
+      ? {
+          price: overview.final_formatted,
+          basePrice: overview.initial_formatted || overview.final_formatted,
+          url: storeUrl,
+        }
       : { price: "N/A", url: storeUrl };
 
     // Editions from package_groups

@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { bestDeal, gameKey, parseGameInput, stripGamePrefix, timeAgo } from "@/lib/utils";
+import {
+  bestDeal,
+  bestDealSavings,
+  gameKey,
+  parseGameInput,
+  stripGamePrefix,
+  timeAgo,
+} from "@/lib/utils";
 
 describe("gameKey", () => {
   it("returns appid when present", () => {
@@ -131,5 +138,69 @@ describe("bestDeal", () => {
 
   it("returns null for empty prices object", () => {
     expect(bestDeal({})).toBeNull();
+  });
+});
+
+describe("bestDealSavings", () => {
+  it("measures the best deal against Steam's list price", () => {
+    expect(
+      bestDealSavings({
+        steam: { price: "R$ 299,00", basePrice: "R$ 299,00" },
+        "instant-gaming": { price: "R$ 226,95" },
+      }),
+    ).toBe(24);
+  });
+
+  it("uses the list price, not Steam's own discounted price", () => {
+    expect(
+      bestDealSavings({
+        steam: { price: "R$ 150,00", basePrice: "R$ 300,00" },
+        nuuvem: { price: "R$ 120,00" },
+      }),
+    ).toBe(60);
+  });
+
+  it("reports Steam's own discount when Steam is the best deal", () => {
+    expect(
+      bestDealSavings({
+        steam: { price: "R$ 75,00", basePrice: "R$ 300,00" },
+        nuuvem: { price: "R$ 120,00" },
+      }),
+    ).toBe(75);
+  });
+
+  it("falls back to Steam's current price when no list price is stored", () => {
+    expect(
+      bestDealSavings({
+        steam: { price: "R$ 200,00" },
+        nuuvem: { price: "R$ 150,00" },
+      }),
+    ).toBe(25);
+  });
+
+  it("returns null when the best deal is not below the list price", () => {
+    expect(
+      bestDealSavings({
+        steam: { price: "R$ 100,00", basePrice: "R$ 100,00" },
+        nuuvem: { price: "R$ 120,00" },
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null when Steam has no usable price", () => {
+    expect(
+      bestDealSavings({
+        steam: { price: "N/A" },
+        nuuvem: { price: "R$ 120,00" },
+      }),
+    ).toBeNull();
+  });
+
+  it("returns null when there is no best deal at all", () => {
+    expect(bestDealSavings({ steam: { price: "N/A" } })).toBeNull();
+  });
+
+  it("returns null for a free-to-play game", () => {
+    expect(bestDealSavings({ steam: { price: "Free to Play" } })).toBeNull();
   });
 });
