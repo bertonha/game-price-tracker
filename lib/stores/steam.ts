@@ -1,5 +1,5 @@
 import type { Edition, StorePrice } from "@/lib/types";
-import { parseReleaseDate, stripGamePrefix } from "@/lib/utils";
+import { decodeHtml, parseReleaseDate, stripGamePrefix } from "@/lib/utils";
 
 export type SteamResult = { price: StorePrice; releaseDate?: string; comingSoon: boolean };
 
@@ -7,18 +7,6 @@ const STEAM_COUNTRY = process.env.STEAM_COUNTRY ?? "BR";
 const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "english";
 
 const EXCLUDE_KEYWORDS = /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
-
-export const decodeHtml = (s: string) =>
-  s
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&reg;/gi, "®")
-    .replace(/&trade;/gi, "™")
-    .replace(/&ndash;/g, "–")
-    .replace(/&mdash;/g, "—");
 
 export async function fetchSteam(appid: string, name: string): Promise<SteamResult> {
   const storeUrl = `https://store.steampowered.com/app/${appid}/?cc=${STEAM_COUNTRY}`;

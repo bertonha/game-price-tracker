@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeHtml } from "@/lib/stores/steam";
+import { decodeHtml } from "@/lib/utils";
 
 describe("decodeHtml", () => {
   it("decodes &amp;", () => {

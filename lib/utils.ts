@@ -1,5 +1,18 @@
 export const gameKey = (g: { appid?: string; name: string }): string => g.appid || g.name;
 
+/** Decode the handful of HTML entities that show up in store product titles. */
+export const decodeHtml = (s: string) =>
+  s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&reg;/gi, "®")
+    .replace(/&trade;/gi, "™")
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—");
+
 export function stripGamePrefix(editionTitle: string, baseName: string): string {
   const norm = (s: string) =>
     s

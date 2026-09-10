@@ -1,6 +1,6 @@
 import { MIN_MATCH_SCORE, matchScore, STORE_EXCLUDE } from "@/lib/stores/match";
 import type { Edition, StorePrice } from "@/lib/types";
-import { stripGamePrefix } from "@/lib/utils";
+import { decodeHtml, stripGamePrefix } from "@/lib/utils";
 
 /** Convert a game name to a Nuuvem URL slug. */
 function toSlug(name: string): string {
@@ -35,26 +35,20 @@ export function decodePrice(encoded: string): string | null {
   }
 }
 
-/** Extract first data-price value from an HTML snippet. */
-function extractPrice(html: string): string | null {
-  const m = html.match(/data-price="([^"]+)"/);
+/** Extract the base game's price from a `product-buy` block — the markup the
+ *  `/item/info/` endpoint returns on its own and the product page embeds.
+ *  Scoping to that block keeps a DLC or edition card further down the product
+ *  page from being read as the base price. */
+export function extractPrice(html: string): string | null {
+  const start = html.indexOf('"product-buy"');
+  const scoped = start === -1 ? html : html.slice(start);
+  const m = scoped.match(/data-price="([^"]+)"/);
   return m ? decodePrice(m[1]) : null;
-}
-
-/** Extract the asset ID from a Nuuvem banner image src. */
-function extractImageId(html: string): string | null {
-  const m = html.match(/\/products\/([a-f0-9]+)\/banners\//);
-  return m ? m[1] : null;
 }
 
 // ── Autocomplete ──────────────────────────────────────────────────────────────
 
-type AutocompleteResult = {
-  bestUrl: string;
-  imageIdToUrl: Map<string, string>;
-};
-
-async function autocomplete(name: string): Promise<AutocompleteResult | null> {
+async function autocomplete(name: string): Promise<string | null> {
   const query = name.split(" ").slice(0, 4).join(" ");
   const url = `https://www.nuuvem.com/br-pt/products_searches/autocomplete?query=${encodeURIComponent(query)}&platform=pc`;
   try {
@@ -68,7 +62,6 @@ async function autocomplete(name: string): Promise<AutocompleteResult | null> {
     };
     if (!data.products?.length) return null;
 
-    const imageIdToUrl = new Map<string, string>();
     let bestUrl: string | null = null;
     let bestScore = 0;
 
@@ -76,8 +69,6 @@ async function autocomplete(name: string): Promise<AutocompleteResult | null> {
       const titleMatch = p.html.match(/<h1[^>]*title="([^"]+)"/);
       if (!titleMatch || STORE_EXCLUDE.test(p.html)) continue;
 
-      const imageId = extractImageId(p.html);
-      if (imageId) imageIdToUrl.set(imageId, p.url);
       const score = matchScore(name, titleMatch[1]);
       if (score > bestScore) {
         bestScore = score;
@@ -85,43 +76,52 @@ async function autocomplete(name: string): Promise<AutocompleteResult | null> {
       }
     }
 
-    return bestScore >= MIN_MATCH_SCORE && bestUrl ? { bestUrl, imageIdToUrl } : null;
+    return bestScore >= MIN_MATCH_SCORE ? bestUrl : null;
   } catch {
     return null;
   }
 }
 
-// ── Edition parsing from full page HTML ──────────────────────────────────────
+// ── Edition parsing ──────────────────────────────────────────────────────────
 
-function parseEditionCards(
-  html: string,
-  baseName: string,
-  basePrice: string,
-  imageIdToUrl: Map<string, string>,
-): Edition[] | undefined {
-  const cardRegex =
-    /<div[^>]*class="[^"]*game-card[^"]*"[^>]*>([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>/g;
+/** Editions are not part of the product page HTML. The page ships an empty
+ *  `<turbo-frame loading="lazy" src="/br-pt/item/<slug>/editions">` that the
+ *  browser fills in afterwards, so they have to be fetched from that URL. */
+function editionsUrl(itemUrl: string): string {
+  return `${itemUrl.replace(/\/+$/, "")}/editions`;
+}
+
+/** Parse the edition cards served by the `/editions` Turbo Frame. Each card is
+ *  an anchor carrying the product title and href, wrapping a price element. */
+export function parseEditionCards(html: string, baseName: string): Edition[] | undefined {
+  const anchorRegex = /<a\b([^>]*)>([\s\S]*?)<\/a>/g;
 
   const editions: Edition[] = [];
-  for (let match = cardRegex.exec(html); match !== null; match = cardRegex.exec(html)) {
-    const card = match[0];
-    const nameMatch = card.match(/game-card__product-name[^>]*>([^<]+)</);
-    const cardName = nameMatch?.[1]?.trim() ?? "";
+  const seen = new Set<string>();
+  for (let match = anchorRegex.exec(html); match !== null; match = anchorRegex.exec(html)) {
+    const [, attrs, body] = match;
+
+    const url = attrs.match(/href="([^"]+)"/)?.[1];
+    if (!url?.includes("/item/") || seen.has(url)) continue;
+
+    // The anchor's title attribute is the cleanest source; the card heading is
+    // a fallback in case the markup drops it.
+    const rawName =
+      attrs.match(/title="([^"]+)"/)?.[1] ??
+      body.match(/game-card__product-name[^>]*>([^<]*)</)?.[1];
+    const cardName = decodeHtml(rawName ?? "").trim();
     if (!cardName || STORE_EXCLUDE.test(cardName)) continue;
 
-    const priceMatch = card.match(/data-price="([^"]+)"/);
+    const priceMatch = body.match(/data-price="([^"]+)"/);
     if (!priceMatch) continue;
     const cardPrice = decodePrice(priceMatch[1]);
-    if (!cardPrice || cardPrice === basePrice) continue;
+    if (!cardPrice) continue;
 
-    const imageId = extractImageId(card);
-    const cardUrl = imageId ? imageIdToUrl.get(imageId) : undefined;
-    if (!cardUrl) continue;
-
+    seen.add(url);
     editions.push({
       name: stripGamePrefix(cardName, baseName),
       price: cardPrice,
-      url: cardUrl,
+      url,
     });
   }
 
@@ -130,55 +130,70 @@ function parseEditionCards(
 
 // ── Fetch by URL ─────────────────────────────────────────────────────────────
 
-async function fetchNuuvemByUrl(
-  itemUrl: string,
-  name: string,
-  imageIdToUrl: Map<string, string>,
-): Promise<StorePrice | null> {
+/** Outcome of a single product lookup.
+ *  `blocked` is kept distinct from `missing` because Nuuvem's bot protection
+ *  rate-limits by IP: once it starts refusing us, every further request digs
+ *  the hole deeper, so the caller must stop rather than try another URL. */
+type Lookup = { kind: "ok"; price: StorePrice } | { kind: "missing" } | { kind: "blocked" };
+
+async function fetchNuuvemByUrl(itemUrl: string, name: string): Promise<Lookup> {
   const slug = itemUrl.split("/item/")[1];
 
   try {
-    // Fire both requests in parallel — editions are nice-to-have
-    const [infoRes, pageRes] = await Promise.all([
-      fetch(`https://www.nuuvem.com/br-pt/item/info/${slug}`, {
-        headers: { ...XHR_HEADERS, referer: itemUrl },
-        signal: AbortSignal.timeout(15_000),
-      }),
-      fetch(itemUrl, {
+    const infoRes = await fetch(`https://www.nuuvem.com/br-pt/item/info/${slug}`, {
+      headers: { ...XHR_HEADERS, referer: itemUrl },
+      signal: AbortSignal.timeout(15_000),
+    }).catch(() => null);
+
+    let price = infoRes?.ok
+      ? extractPrice(((await infoRes.json()) as { info: string }).info)
+      : null;
+
+    // Bot protection sometimes rejects the XHR endpoint while still serving the
+    // product page, which embeds the same product-buy block. The page is a much
+    // larger response, so only reach for it when the cheap endpoint failed.
+    if (!price) {
+      const pageRes = await fetch(itemUrl, {
         headers: { ...HEADERS, accept: "text/html" },
         signal: AbortSignal.timeout(15_000),
-      }).catch(() => null),
-    ]);
-    if (!infoRes.ok) return null;
-
-    const { info } = (await infoRes.json()) as { info: string };
-    const price = extractPrice(info);
-    if (!price) return null;
-
-    let editions: Edition[] | undefined;
-    if (pageRes?.ok) {
-      editions = parseEditionCards(await pageRes.text(), name, price, imageIdToUrl);
+      }).catch(() => null);
+      if (!pageRes?.ok) return { kind: "blocked" };
+      price = extractPrice(await pageRes.text());
     }
+    if (!price) return { kind: "missing" };
 
-    return { price, url: itemUrl, editions };
+    // Only now that the product is known to exist is an editions request worth
+    // spending — it is nice-to-have, and never worth burning on a bad guess.
+    const editionsRes = await fetch(editionsUrl(itemUrl), {
+      headers: { ...HEADERS, accept: "text/html", referer: itemUrl },
+      signal: AbortSignal.timeout(15_000),
+    }).catch(() => null);
+    const editions = editionsRes?.ok
+      ? parseEditionCards(await editionsRes.text(), name)
+      : undefined;
+
+    return { kind: "ok", price: { price, url: itemUrl, editions } };
   } catch {
-    return null;
+    return { kind: "blocked" };
   }
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
+const NOT_FOUND: StorePrice = { price: "N/A", url: null };
+
 export async function fetchNuuvem(name: string): Promise<StorePrice> {
-  const ac = await autocomplete(name);
-  if (ac) {
-    const result = await fetchNuuvemByUrl(ac.bestUrl, name, ac.imageIdToUrl);
-    if (result) return result;
+  const bestUrl = await autocomplete(name);
+  if (bestUrl) {
+    const found = await fetchNuuvemByUrl(bestUrl, name);
+    if (found.kind === "ok") return found.price;
+    // Autocomplete handed us a URL that should exist. If Nuuvem refused it,
+    // guessing a second URL will be refused too — stop asking.
+    if (found.kind === "blocked") return NOT_FOUND;
   }
 
   // Fallback: try a direct slug-based URL when autocomplete finds no good match.
   const directUrl = `https://www.nuuvem.com/br-pt/item/${toSlug(name)}`;
-  const direct = await fetchNuuvemByUrl(directUrl, name, new Map());
-  if (direct) return direct;
-
-  return { price: "N/A", url: null };
+  const direct = await fetchNuuvemByUrl(directUrl, name);
+  return direct.kind === "ok" ? direct.price : NOT_FOUND;
 }
