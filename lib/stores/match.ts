@@ -11,12 +11,15 @@ export const MIN_MATCH_SCORE = 0.6;
 const OLD_EDITION_QUALIFIERS = /\b(goty|classic|legacy|game of the year|anniversary)\b/i;
 
 /** Nouns that close out a phrase describing a repackaging of the same game —
- *  "Game of the YoRHa Edition", "Director's Cut", "Definitive Edition".
+ *  "Game of the YoRHa Edition", "Director's Cut", "Deluxe".
  *  A trailing phrase that does NOT end in one of these marks a different game
  *  ("Portal 2", "Journey to the Savage Planet"), so the distinction is what
- *  keeps `editionOfQuery` from swallowing sequels and unrelated titles. */
-const EDITION_SUFFIX =
-  /\b(edition|cut|remaster|remastered|remake|collection|bundle|goty|complete|deluxe|ultimate|definitive|anniversary)$/i;
+ *  keeps `editionOfQuery` from swallowing sequels and unrelated titles.
+ *
+ *  Deliberately excluded: remaster, remake, collection, bundle, anniversary.
+ *  Those name a separate product with its own Steam appid — "Fable Anniversary"
+ *  is a re-release of the 2004 game, not packaging around the 2026 "Fable". */
+const EDITION_SUFFIX = /\b(edition|cut|goty|complete|deluxe|ultimate|premium)$/i;
 
 function normalize(s: string): string[] {
   return s
@@ -30,8 +33,14 @@ function normalize(s: string): string[] {
 }
 
 /** Whether `tWords` is the whole query followed only by an edition qualifier —
- *  the same game in different packaging, not a different game. */
+ *  the same game in different packaging, not a different game.
+ *
+ *  A one-word query is never enough to conclude that: "Fable" is a prefix of
+ *  every game in the series, so anything trailing it could just as easily be a
+ *  different entry. Only a query specific enough to span two words earns the
+ *  benefit of the doubt. */
 function editionOfQuery(qWords: string[], tWords: string[]): boolean {
+  if (qWords.length < 2) return false;
   if (tWords.length <= qWords.length) return false;
   for (let i = 0; i < qWords.length; i++) if (tWords[i] !== qWords[i]) return false;
   return EDITION_SUFFIX.test(tWords.slice(qWords.length).join(" "));

@@ -57,7 +57,7 @@ describe("matchScore — edition-suffixed titles", () => {
     ["The Witcher 3: Wild Hunt", "The Witcher 3: Wild Hunt - Complete Edition"],
     ["DOOM Eternal", "DOOM Eternal: Deluxe Edition"],
     ["Ghost of Tsushima", "Ghost of Tsushima Director's Cut"],
-    ["Dead Space", "Dead Space Remake"],
+    ["ACE COMBAT 8: WINGS OF THEVE", "ACE COMBAT 8: WINGS OF THEVE Deluxe Edition"],
   ])("accepts %s → %s", (query, title) => {
     expect(matchScore(query, title)).toBeGreaterThanOrEqual(MIN_MATCH_SCORE);
   });
@@ -71,11 +71,15 @@ describe("matchScore — edition-suffixed titles", () => {
     expect(matchScore(query, title)).toBeLessThan(MIN_MATCH_SCORE);
   });
 
-  it("does not lift a sequel whose Jaccard score already clears the bar", () => {
+  it.each([
+    ["Half-Life", "Half-Life 2"],
+    ["Dead Space", "Dead Space Remake"],
+    ["Dark Souls", "Dark Souls Remastered"],
+  ])("does not lift %s → %s, whose Jaccard already clears the bar", (query, title) => {
     // Pre-existing behaviour: a two-word query against a three-word title
-    // scores 2/3, so "Half-Life" matches "Half-Life 2" with or without the
-    // edition rule. Pinned here so the edition lift is not blamed for it.
-    expect(matchScore("Half-Life", "Half-Life 2")).toBeCloseTo(2 / 3);
+    // scores 2/3 with or without the edition rule. Pinned here so the lift is
+    // neither blamed nor credited for these.
+    expect(matchScore(query, title)).toBeCloseTo(2 / 3);
   });
 
   it("does not lift a title that merely contains an edition word mid-phrase", () => {
@@ -84,6 +88,32 @@ describe("matchScore — edition-suffixed titles", () => {
 
   it("keeps a GOTY-only listing above the threshold despite the penalty", () => {
     expect(matchScore("Fallout 4", "Fallout 4 Game of the Year Edition")).toBeGreaterThanOrEqual(
+      MIN_MATCH_SCORE,
+    );
+  });
+});
+
+describe("matchScore — a one-word query is not a base name", () => {
+  // Steam app 2769570 is "Fable" (2026). Instant Gaming matched it to "Fable
+  // Anniversary" (app 288470), a re-release of the 2004 game, because the
+  // edition rule treated "Anniversary" as mere packaging around "Fable".
+  it.each([
+    ["Fable", "Fable Anniversary"],
+    ["Fable", "Fable: The Lost Chapters"],
+    ["Fable", "Fable III"],
+    ["Hades", "Hades Deluxe Edition"],
+  ])("rejects %s → %s", (query, title) => {
+    expect(matchScore(query, title)).toBeLessThan(MIN_MATCH_SCORE);
+  });
+
+  it("still matches the game itself exactly", () => {
+    expect(matchScore("Fable", "Fable")).toBe(1);
+  });
+
+  it("does not treat a re-release as packaging even for a longer query", () => {
+    // "Anniversary" names a separate product, so it must not lift no matter
+    // how specific the query is.
+    expect(matchScore("Tomb Raider I-III", "Tomb Raider I-III Anniversary Bundle")).toBeLessThan(
       MIN_MATCH_SCORE,
     );
   });
