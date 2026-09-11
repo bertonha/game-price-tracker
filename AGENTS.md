@@ -11,6 +11,7 @@ A Next.js (App Router) application that compares game prices across **Steam BR**
 - **UI/UX:** Draggable game cards (`@dnd-kit`), Store Filters toggle, Dark mode, per-game/bulk refresh.
 
 ## 2. Tech Stack & Toolchain Quirks
+- **Runtime:** Node.js 26+ (enforced via `engines.node` in `package.json`, pinned in `.nvmrc`).
 - **Framework:** Next.js 16 (App Router), React 19, Tailwind CSS v4.
 - **Linting & Formatting:** Uses **Biome**. Do NOT add or use ESLint or Prettier.
 - **Testing:** Uses **Vitest** (not Jest). Configured via `vitest.config.ts`.
