@@ -14,11 +14,6 @@ Compare game prices across **Steam BR** and **Nuuvem** — focused on the Brazil
 
 ## Getting Started
 
-### Prerequisites
-
-- **Node.js 26+** (see `.nvmrc`; `nvm use` or `fnm use` picks it up)
-- **pnpm** (version pinned via `packageManager` in `package.json`)
-
 ### 1. Clone / unzip the project
 
 ```bash
