@@ -69,28 +69,53 @@ export function parsePrice(priceStr: string | null | undefined): number | null {
   return Number.isNaN(num) ? null : num;
 }
 
-type PriceInfo = { price?: string | null; basePrice?: string | null };
+type EditionInfo = { name: string; price?: string | null };
+type PriceInfo = { price?: string | null; basePrice?: string | null; editions?: EditionInfo[] };
 
-export function bestDeal(prices: Partial<Record<string, PriceInfo>>): string | null {
-  let bestVal: number | null = null;
-  let bestStore: string | null = null;
+/** Editions that are extras sold alongside the game rather than a way to own
+ *  it — they must never be picked as the cheapest way to buy the game. */
+const NON_GAME_EDITION =
+  /\b(soundtrack|ost|artbook|art ?book|wallpapers?|dlc|add.?on|season pass|expansion|upgrade|pack|bundle ?pack|cosmetics?|skins?)\b/i;
+
+export type BestOffer = {
+  store: string;
+  price: string;
+  /** Set when an edition, not the standard game, is the cheapest way in. */
+  edition?: string;
+};
+
+/** The cheapest way to buy the game across all stores, counting each store's
+ *  full-game editions (a discounted Deluxe can undercut the standard game). */
+export function bestOffer(prices: Partial<Record<string, PriceInfo>>): BestOffer | null {
+  let best: BestOffer | null = null;
+  let bestValue = Number.POSITIVE_INFINITY;
   for (const [store, info] of Object.entries(prices)) {
-    const n = parsePrice(info?.price);
-    if (n !== null && (bestVal === null || n < bestVal)) {
-      bestVal = n;
-      bestStore = store;
+    if (!info) continue;
+    const candidates: { price?: string | null; edition?: string }[] = [
+      { price: info.price },
+      ...(info.editions ?? [])
+        .filter((ed) => !NON_GAME_EDITION.test(ed.name))
+        .map((ed) => ({ price: ed.price, edition: ed.name })),
+    ];
+    for (const c of candidates) {
+      const value = parsePrice(c.price);
+      if (value === null || !c.price || value >= bestValue) continue;
+      bestValue = value;
+      best = { store, price: c.price, ...(c.edition ? { edition: c.edition } : {}) };
     }
   }
-  return bestStore;
+  return best;
+}
+
+export function bestDeal(prices: Partial<Record<string, PriceInfo>>): string | null {
+  return bestOffer(prices)?.store ?? null;
 }
 
 /** How far below Steam's official list price the best deal sits, as a whole
  *  percentage. Returns null when there is nothing to compare, or when the best
  *  deal is not actually cheaper than the list price. */
 export function bestDealSavings(prices: Partial<Record<string, PriceInfo>>): number | null {
-  const store = bestDeal(prices);
-  if (!store) return null;
-  const best = parsePrice(prices[store]?.price);
+  const best = parsePrice(bestOffer(prices)?.price);
   const steam = prices.steam;
   const list = parsePrice(steam?.basePrice) ?? parsePrice(steam?.price);
   if (best === null || list === null || list <= 0) return null;

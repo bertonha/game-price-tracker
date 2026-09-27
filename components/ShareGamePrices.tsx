@@ -5,7 +5,7 @@ import { loadGames, saveGames } from "@/lib/storage";
 import { useSupabaseBrowserClient } from "@/lib/supabase/browser-auth";
 import { loadUserGames, upsertUserGame } from "@/lib/supabase/storage";
 import type { GamePrices } from "@/lib/types";
-import { bestDeal } from "@/lib/utils";
+import { type BestOffer, bestOffer } from "@/lib/utils";
 import BestDealBanner from "./BestDealBanner";
 import StorePriceList from "./StorePriceList";
 
@@ -18,7 +18,7 @@ interface Props {
 export default function ShareGamePrices({ appid, name, img }: Props) {
   const supabase = useSupabaseBrowserClient();
   const [prices, setPrices] = useState<Partial<GamePrices>>({});
-  const [best, setBest] = useState<string | null>(null);
+  const [best, setBest] = useState<BestOffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [isTracked, setIsTracked] = useState(false);
   const [tracking, setTracking] = useState(false);
@@ -34,7 +34,7 @@ export default function ShareGamePrices({ appid, name, img }: Props) {
         const data = await res.json();
         if (data.prices) {
           setPrices(data.prices);
-          setBest(bestDeal(data.prices));
+          setBest(bestOffer(data.prices));
         }
       } finally {
         setLoading(false);
@@ -92,8 +92,8 @@ export default function ShareGamePrices({ appid, name, img }: Props) {
 
   return (
     <>
-      <StorePriceList prices={prices} gameName={name} bestStore={best} />
-      {best && <BestDealBanner bestStore={best} />}
+      <StorePriceList prices={prices} gameName={name} best={best} />
+      {best && <BestDealBanner bestStore={best.store} bestEdition={best.edition} />}
 
       {isTracked ? (
         <p className="text-green-600 text-sm dark:text-green-400">✓ Already in your tracker</p>

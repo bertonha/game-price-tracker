@@ -1,5 +1,5 @@
 import type { Game } from "@/lib/types";
-import { bestDealSavings, parsePrice } from "@/lib/utils";
+import { bestDealSavings, bestOffer, parsePrice } from "@/lib/utils";
 
 export function prioritizeStarred(list: Game[]): Game[] {
   const starred = list.filter((g) => g.isFavorite);
@@ -19,12 +19,7 @@ function sortWithinStarGroups(
 }
 
 function minPrice(game: Game): number {
-  let min = Number.POSITIVE_INFINITY;
-  for (const info of Object.values(game.prices)) {
-    const n = parsePrice(info?.price);
-    if (n !== null && n < min) min = n;
-  }
-  return min;
+  return parsePrice(bestOffer(game.prices)?.price) ?? Number.POSITIVE_INFINITY;
 }
 
 export function sortByPriceWithinStarGroups(

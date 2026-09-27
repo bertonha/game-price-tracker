@@ -2,6 +2,8 @@ import { STORES } from "@/lib/types";
 
 interface Props {
   bestStore: string | null;
+  /** The edition that makes this the best deal, when it isn't the standard game. */
+  bestEdition?: string;
   /** Percent below Steam's official list price, or null when not comparable. */
   savings?: number | null;
   /** Steam's official list price, struck through beside the savings. */
@@ -10,7 +12,13 @@ interface Props {
   bestPrice?: string | null;
 }
 
-export default function BestDealBanner({ bestStore, savings, steamListPrice, bestPrice }: Props) {
+export default function BestDealBanner({
+  bestStore,
+  bestEdition,
+  savings,
+  steamListPrice,
+  bestPrice,
+}: Props) {
   const showDiscount = savings != null && steamListPrice && bestPrice;
 
   return (
@@ -24,6 +32,7 @@ export default function BestDealBanner({ bestStore, savings, steamListPrice, bes
         ) : (
           "N/A"
         )}
+        {bestStore && bestEdition && <span className="italic"> · {bestEdition}</span>}
       </span>
       {showDiscount && (
         <span

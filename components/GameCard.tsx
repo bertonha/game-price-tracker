@@ -2,8 +2,8 @@
 
 import { RefreshCw, Share2, Star, X } from "lucide-react";
 import Image from "next/image";
-import { type Game, STORES, type StoreId } from "@/lib/types";
-import { bestDeal, bestDealSavings, formatReleaseDate, gameKey, timeAgo } from "@/lib/utils";
+import { type Game, STORES } from "@/lib/types";
+import { bestDealSavings, bestOffer, formatReleaseDate, gameKey, timeAgo } from "@/lib/utils";
 import BestDealBanner from "./BestDealBanner";
 import StorePriceList from "./StorePriceList";
 
@@ -31,7 +31,7 @@ export default function GameCard({
   dragHandleProps,
 }: Props) {
   const key = gameKey(game);
-  const best = bestDeal(game.prices);
+  const best = bestOffer(game.prices);
   const savings = bestDealSavings(game.prices);
   const releaseDate = game.releaseDate ? new Date(game.releaseDate) : null;
 
@@ -144,16 +144,17 @@ export default function GameCard({
         </div>
 
         <BestDealBanner
-          bestStore={best}
+          bestStore={best?.store ?? null}
+          bestEdition={best?.edition}
           savings={savings}
           steamListPrice={game.prices.steam?.basePrice ?? game.prices.steam?.price}
-          bestPrice={best ? game.prices[best as StoreId]?.price : null}
+          bestPrice={best?.price}
         />
 
         <StorePriceList
           prices={game.prices}
           gameName={game.name}
-          bestStore={best}
+          best={best}
           stores={visibleStores}
         />
 

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bestDeal,
   bestDealSavings,
+  bestOffer,
   gameKey,
   parseGameInput,
   stripGamePrefix,
@@ -141,7 +142,67 @@ describe("bestDeal", () => {
   });
 });
 
+describe("bestOffer", () => {
+  it("picks a full-game edition that undercuts every standard price", () => {
+    expect(
+      bestOffer({
+        steam: {
+          price: "R$ 179,99",
+          editions: [{ name: "Deluxe Edition", price: "R$ 83,99" }],
+        },
+        nuuvem: { price: "R$ 179,99" },
+        "instant-gaming": { price: "R$ 124,03" },
+      }),
+    ).toEqual({ store: "steam", price: "R$ 83,99", edition: "Deluxe Edition" });
+  });
+
+  it("ignores extras like soundtracks even when they are cheapest", () => {
+    expect(
+      bestOffer({
+        nuuvem: {
+          price: "R$ 179,99",
+          editions: [
+            { name: "Soundtrack", price: "R$ 26,49" },
+            { name: "Original Soundtrack (OST)", price: "R$ 10,00" },
+            { name: "Digital Artbook", price: "R$ 15,00" },
+          ],
+        },
+        "instant-gaming": { price: "R$ 124,03" },
+      }),
+    ).toEqual({ store: "instant-gaming", price: "R$ 124,03" });
+  });
+
+  it("prefers the standard game over an edition at the same price", () => {
+    expect(
+      bestOffer({
+        steam: { price: "R$ 50,00", editions: [{ name: "Deluxe Edition", price: "R$ 50,00" }] },
+      }),
+    ).toEqual({ store: "steam", price: "R$ 50,00" });
+  });
+
+  it("uses an edition when the store has no standard price", () => {
+    expect(
+      bestOffer({
+        steam: { price: "N/A", editions: [{ name: "Complete Edition", price: "R$ 40,00" }] },
+      }),
+    ).toEqual({ store: "steam", price: "R$ 40,00", edition: "Complete Edition" });
+  });
+});
+
 describe("bestDealSavings", () => {
+  it("counts a cheaper edition against Steam's standard list price", () => {
+    expect(
+      bestDealSavings({
+        steam: {
+          price: "R$ 200,00",
+          basePrice: "R$ 200,00",
+          editions: [{ name: "Deluxe Edition", price: "R$ 80,00" }],
+        },
+        "instant-gaming": { price: "R$ 124,03" },
+      }),
+    ).toBe(60);
+  });
+
   it("measures the best deal against Steam's list price", () => {
     expect(
       bestDealSavings({

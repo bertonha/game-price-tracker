@@ -1,5 +1,6 @@
 import type { GamePrices } from "@/lib/types";
 import { STORES, type StoreId } from "@/lib/types";
+import type { BestOffer } from "@/lib/utils";
 import PriceCell from "./PriceCell";
 
 type Store = (typeof STORES)[number];
@@ -7,16 +8,17 @@ type Store = (typeof STORES)[number];
 interface Props {
   prices: Partial<GamePrices>;
   gameName: string;
-  bestStore: string | null;
+  best: BestOffer | null;
   stores?: readonly Store[];
 }
 
-export default function StorePriceList({ prices, gameName, bestStore, stores = STORES }: Props) {
+export default function StorePriceList({ prices, gameName, best, stores = STORES }: Props) {
   return (
     <div className="flex flex-col gap-1.5">
       {stores.map((store) => {
         const info = prices[store.id as StoreId];
-        const isBest = bestStore === store.id && info?.price && info.price !== "N/A";
+        const isBestStore = best?.store === store.id;
+        const isBest = isBestStore && !best?.edition;
 
         return (
           <div key={store.id} className="flex flex-col gap-1">
@@ -68,7 +70,9 @@ export default function StorePriceList({ prices, gameName, bestStore, stores = S
                       <PriceCell
                         price={ed.price}
                         url={ed.url}
-                        isBest={false}
+                        isBest={
+                          isBestStore && best?.edition === ed.name && best?.price === ed.price
+                        }
                         storeName={store.name}
                         gameName={`${gameName} ${shortName}`}
                       />
