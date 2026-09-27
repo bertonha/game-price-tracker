@@ -8,6 +8,33 @@ const STEAM_LANGUAGE = process.env.STEAM_LANGUAGE ?? "english";
 
 const EXCLUDE_KEYWORDS = /\b(upgrade|kit|dlc|pack|content|add.?on|expansion|season pass)\b/i;
 
+type SteamSub = {
+  packageid: number;
+  option_text: string;
+  percent_savings: number;
+  price_in_cents_with_discount: number;
+};
+
+const formatCents = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
+
+// option_text looks like `Title - <span class="discount_original_price">R$ 209,99</span> R$ 83,99`
+const subTitle = (s: SteamSub) =>
+  decodeHtml(
+    s.option_text
+      .replace(/<[^>]+>/g, "")
+      .replace(/R\$[\s\d,.]+/g, "")
+      .replace(/\s*-\s*$/, "")
+      .trim(),
+  );
+
+const normTitle = (s: string) =>
+  s
+    .replace(/[™®©]/g, "")
+    .replace(/[:\-–—]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
 export async function fetchSteam(appid: string, name: string): Promise<SteamResult> {
   const storeUrl = `https://store.steampowered.com/app/${appid}/?cc=${STEAM_COUNTRY}`;
   try {
@@ -23,20 +50,16 @@ export async function fetchSteam(appid: string, name: string): Promise<SteamResu
         data?: {
           is_free?: boolean;
           price_overview?: { final_formatted: string; initial_formatted?: string };
-          package_groups?: {
-            subs?: {
-              packageid: number;
-              option_text: string;
-              percent_savings: number;
-              price_in_cents_with_discount: number;
-            }[];
-          }[];
+          name?: string;
+          package_groups?: { subs?: SteamSub[] }[];
           release_date?: { coming_soon?: boolean; date?: string };
         };
       }
     >;
 
-    const data = json[appid]?.data;
+    // Steam sometimes keys the response by a different id than the one requested
+    // (e.g. appid 1620730 comes back under "3494350"), so fall back to the only entry.
+    const data = (json[appid] ?? Object.values(json)[0])?.data;
     if (!data) return { price: { price: "N/A", url: storeUrl }, comingSoon: false };
 
     const releaseDateRaw = data.release_date;
@@ -48,37 +71,44 @@ export async function fetchSteam(appid: string, name: string): Promise<SteamResu
     if (data.is_free)
       return { price: { price: "Free to Play", url: storeUrl }, releaseDate, comingSoon };
 
-    const overview = data.price_overview;
-    // `initial_formatted` is only populated while the game is discounted;
-    // otherwise the list price is the price being charged.
-    const base: StorePrice = overview
-      ? {
-          price: overview.final_formatted,
-          basePrice: overview.initial_formatted || overview.final_formatted,
-          url: storeUrl,
-        }
-      : { price: "N/A", url: storeUrl };
-
-    // Editions from package_groups
     const allPaidSubs = (data.package_groups ?? [])
       .flatMap((g) => g.subs ?? [])
       .filter((s) => s.price_in_cents_with_discount > 0);
 
-    const editionSubs = allPaidSubs.slice(1); // first sub is always the base game
-    const editions: Edition[] = editionSubs
+    // The base game is usually the first package, but some stores list an edition
+    // first (and `price_overview` then reflects that edition), so prefer the
+    // package whose title is exactly the game name.
+    const baseNames = new Set([name, data.name].filter((n): n is string => !!n).map(normTitle));
+    const matchedIdx = allPaidSubs.findIndex((s) => baseNames.has(normTitle(subTitle(s))));
+    const baseIdx = matchedIdx === -1 ? 0 : matchedIdx;
+
+    const overview = data.price_overview;
+    let base: StorePrice;
+    if (baseIdx > 0) {
+      const sub = allPaidSubs[baseIdx];
+      const price = formatCents(sub.price_in_cents_with_discount);
+      const original = sub.option_text.match(
+        /class="discount_original_price">\s*(R\$\s*[\d.,]+)\s*</,
+      )?.[1];
+      base = { price, basePrice: original ?? price, url: storeUrl };
+    } else if (overview) {
+      // `initial_formatted` is only populated while the game is discounted;
+      // otherwise the list price is the price being charged.
+      base = {
+        price: overview.final_formatted,
+        basePrice: overview.initial_formatted || overview.final_formatted,
+        url: storeUrl,
+      };
+    } else {
+      base = { price: "N/A", url: storeUrl };
+    }
+
+    const editions: Edition[] = allPaidSubs
+      .filter((_, i) => i !== baseIdx)
       .filter((s) => !EXCLUDE_KEYWORDS.test(s.option_text))
       .map((s) => ({
-        name: stripGamePrefix(
-          decodeHtml(
-            s.option_text
-              .replace(/<[^>]+>/g, "")
-              .replace(/R\$[\s\d,.]+/g, "")
-              .replace(/\s*-\s*$/, "")
-              .trim(),
-          ),
-          name,
-        ),
-        price: `R$ ${(s.price_in_cents_with_discount / 100).toFixed(2).replace(".", ",")}`,
+        name: stripGamePrefix(subTitle(s), name),
+        price: formatCents(s.price_in_cents_with_discount),
         url: `https://store.steampowered.com/sub/${s.packageid}/?cc=BR`,
       }));
 
