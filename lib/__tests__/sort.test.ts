@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isSortOrder,
   prioritizeStarred,
   sortByDiscountWithinStarGroups,
   sortByPriceWithinStarGroups,
@@ -259,5 +260,17 @@ describe("sortByDiscountWithinStarGroups", () => {
       "Half",
       "Quarter",
     ]);
+  });
+});
+
+describe("isSortOrder", () => {
+  it("accepts every known sort order", () => {
+    expect(isSortOrder("priority")).toBe(true);
+    expect(isSortOrder("best-discount")).toBe(true);
+  });
+
+  it("rejects stale or missing stored values", () => {
+    expect(isSortOrder("alphabetical")).toBe(false);
+    expect(isSortOrder(null)).toBe(false);
   });
 });

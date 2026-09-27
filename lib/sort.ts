@@ -67,13 +67,20 @@ export function sortByDiscountWithinStarGroups(list: Game[], ignoreStarred = fal
   return sortWithinStarGroups(list, byDiscount, ignoreStarred);
 }
 
-export type SortOrder =
-  | "priority"
-  | "cheapest"
-  | "expensive"
-  | "best-discount"
-  | "release-newest"
-  | "release-oldest";
+export const SORT_ORDERS = [
+  "priority",
+  "cheapest",
+  "expensive",
+  "best-discount",
+  "release-newest",
+  "release-oldest",
+] as const;
+
+export type SortOrder = (typeof SORT_ORDERS)[number];
+
+export function isSortOrder(value: unknown): value is SortOrder {
+  return SORT_ORDERS.includes(value as SortOrder);
+}
 
 export function sortGames(list: Game[], sortOrder: SortOrder, ignoreStarred = false): Game[] {
   if (sortOrder === "cheapest") return sortByPriceWithinStarGroups(list, "asc", ignoreStarred);

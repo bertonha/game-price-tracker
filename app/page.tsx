@@ -19,7 +19,7 @@ import ShareModal from "@/components/ShareModal";
 import SortableGameCard from "@/components/SortableGameCard";
 import { useCollection } from "@/hooks/useCollection";
 import { filterByFavorite, filterByQuery, filterByStore } from "@/lib/filter";
-import { type SortOrder, sortGames } from "@/lib/sort";
+import { isSortOrder, type SortOrder, sortGames } from "@/lib/sort";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Game } from "@/lib/types";
 import { gameKey } from "@/lib/utils";
@@ -55,7 +55,14 @@ export default function HomePage() {
 
   const [shareGame, setShareGame] = useState<Game | null>(null);
   const [activeStores, setActiveStores] = useState<Set<string>>(new Set());
-  const [sortOrder, setSortOrder] = useState<SortOrder>("priority");
+  const [sortOrder, setSortOrder] = useState<SortOrder>(() => {
+    try {
+      const saved = localStorage.getItem("sortOrder");
+      return isSortOrder(saved) ? saved : "priority";
+    } catch {
+      return "priority";
+    }
+  });
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [savedGamesQuery, setSavedGamesQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(() => {
@@ -65,6 +72,13 @@ export default function HomePage() {
       return false;
     }
   });
+
+  function handleSortOrderChange(next: SortOrder) {
+    setSortOrder(next);
+    try {
+      localStorage.setItem("sortOrder", next);
+    } catch {}
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -132,7 +146,7 @@ export default function HomePage() {
         onRefreshAll={refreshAll}
         onClearAll={clearAll}
         sortOrder={sortOrder}
-        onSortOrderChange={setSortOrder}
+        onSortOrderChange={handleSortOrderChange}
       />
 
       {/* Status + progress */}
