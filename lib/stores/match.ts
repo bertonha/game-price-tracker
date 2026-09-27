@@ -1,6 +1,10 @@
 /** Regex that matches DLC/add-on/season pass titles — used to exclude them from price results. */
 export const STORE_EXCLUDE = /\b(dlc|add.?on|season pass|expansion|upgrade)\b/i;
 
+/** Extras sold as a product's "edition" that don't include the game itself.
+ *  Only tested against a title — card HTML can mention these words in passing. */
+export const NON_GAME_EXTRA = /\b(soundtrack|ost|art ?book|wallpapers?)\b/i;
+
 /** Minimum matchScore required to accept a result.
  *  A score of 0.5 lets "Dwarf Journey" match the query "Journey"; 0.6 blocks it. */
 export const MIN_MATCH_SCORE = 0.6;

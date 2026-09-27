@@ -32,6 +32,15 @@ const frame = (inner: string) =>
 const BASE = "ACE COMBAT 8: WINGS OF THEVE";
 
 describe("parseEditionCards", () => {
+  it("skips soundtrack and artbook editions", () => {
+    const html = frame(
+      card("Hell is Us Soundtrack", "hell-is-us-soundtrack", 2649) +
+        card("Hell is Us Digital Artbook", "hell-is-us-artbook", 1500) +
+        card("Hell is Us Deluxe Edition", "hell-is-us-deluxe-edition", 20999),
+    );
+    expect(parseEditionCards(html, "Hell is Us")?.map((e) => e.name)).toEqual(["Deluxe Edition"]);
+  });
+
   it("parses a single edition card", () => {
     const html = frame(
       card(`${BASE} Deluxe Edition`, "ace-combat-8-wings-of-theve-deluxe-edition", 35700),

@@ -1,4 +1,4 @@
-import { MIN_MATCH_SCORE, matchScore, STORE_EXCLUDE } from "@/lib/stores/match";
+import { MIN_MATCH_SCORE, matchScore, NON_GAME_EXTRA, STORE_EXCLUDE } from "@/lib/stores/match";
 import type { Edition, StorePrice } from "@/lib/types";
 import { decodeHtml, stripGamePrefix } from "@/lib/utils";
 
@@ -122,7 +122,7 @@ export function parseEditionCards(html: string, baseName: string): Edition[] | u
       attrs.match(/title="([^"]+)"/)?.[1] ??
       body.match(/game-card__product-name[^>]*>([^<]*)</)?.[1];
     const cardName = decodeHtml(rawName ?? "").trim();
-    if (!cardName || STORE_EXCLUDE.test(cardName)) continue;
+    if (!cardName || STORE_EXCLUDE.test(cardName) || NON_GAME_EXTRA.test(cardName)) continue;
 
     const priceMatch = body.match(/data-price="([^"]+)"/);
     if (!priceMatch) continue;
