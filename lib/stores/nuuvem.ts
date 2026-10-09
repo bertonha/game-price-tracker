@@ -56,6 +56,14 @@ export function extractPrice(html: string): string | null {
   return m ? decodePrice(m[1]) : null;
 }
 
+/** Whether a full product page is the Steam listing. The DRM badge lives on the
+ *  cover art in the page header, ahead of the `product-buy` block; scoping to
+ *  that header keeps badges on related-game cards further down out of it. */
+export function isSteamProductPage(html: string): boolean {
+  const end = html.indexOf('"product-buy"');
+  return isSteamCard(end === -1 ? html : html.slice(0, end));
+}
+
 // ── Autocomplete ──────────────────────────────────────────────────────────────
 
 async function autocomplete(name: string): Promise<string | null> {
@@ -148,29 +156,45 @@ export function parseEditionCards(html: string, baseName: string): Edition[] | u
  *  the hole deeper, so the caller must stop rather than try another URL. */
 type Lookup = { kind: "ok"; price: StorePrice } | { kind: "missing" } | { kind: "blocked" };
 
-async function fetchNuuvemByUrl(itemUrl: string, name: string): Promise<Lookup> {
+/** Fetch the full product page, or null when Nuuvem refuses it. */
+async function fetchPage(itemUrl: string): Promise<string | null> {
+  const res = await fetch(itemUrl, {
+    headers: { ...HEADERS, accept: "text/html" },
+    signal: AbortSignal.timeout(15_000),
+  }).catch(() => null);
+  return res?.ok ? res.text() : null;
+}
+
+/** `guessed` marks a URL built from the game name rather than picked by
+ *  autocomplete. Such a URL can land on another storefront's listing — the
+ *  Microsoft Store "Minecraft Dungeons II" owns the plain slug — and the
+ *  `/item/info/` payload carries no DRM badge, so a guess is priced from the
+ *  product page, where the badge can be checked. */
+async function fetchNuuvemByUrl(itemUrl: string, name: string, guessed = false): Promise<Lookup> {
   const slug = itemUrl.split("/item/")[1];
 
   try {
-    const infoRes = await fetch(`https://www.nuuvem.com/br-pt/item/info/${slug}`, {
-      headers: { ...XHR_HEADERS, referer: itemUrl },
-      signal: AbortSignal.timeout(15_000),
-    }).catch(() => null);
-
-    let price = infoRes?.ok
-      ? extractPrice(((await infoRes.json()) as { info: string }).info)
-      : null;
-
-    // Bot protection sometimes rejects the XHR endpoint while still serving the
-    // product page, which embeds the same product-buy block. The page is a much
-    // larger response, so only reach for it when the cheap endpoint failed.
-    if (!price) {
-      const pageRes = await fetch(itemUrl, {
-        headers: { ...HEADERS, accept: "text/html" },
+    let price: string | null;
+    if (guessed) {
+      const html = await fetchPage(itemUrl);
+      if (html === null) return { kind: "blocked" };
+      price = isSteamProductPage(html) ? extractPrice(html) : null;
+    } else {
+      const infoRes = await fetch(`https://www.nuuvem.com/br-pt/item/info/${slug}`, {
+        headers: { ...XHR_HEADERS, referer: itemUrl },
         signal: AbortSignal.timeout(15_000),
       }).catch(() => null);
-      if (!pageRes?.ok) return { kind: "blocked" };
-      price = extractPrice(await pageRes.text());
+
+      price = infoRes?.ok ? extractPrice(((await infoRes.json()) as { info: string }).info) : null;
+
+      // Bot protection sometimes rejects the XHR endpoint while still serving the
+      // product page, which embeds the same product-buy block. The page is a much
+      // larger response, so only reach for it when the cheap endpoint failed.
+      if (!price) {
+        const html = await fetchPage(itemUrl);
+        if (html === null) return { kind: "blocked" };
+        price = extractPrice(html);
+      }
     }
     if (!price) return { kind: "missing" };
 
@@ -206,6 +230,6 @@ export async function fetchNuuvem(name: string): Promise<StorePrice> {
 
   // Fallback: try a direct slug-based URL when autocomplete finds no good match.
   const directUrl = `https://www.nuuvem.com/br-pt/item/${toSlug(name)}`;
-  const direct = await fetchNuuvemByUrl(directUrl, name);
+  const direct = await fetchNuuvemByUrl(directUrl, name, true);
   return direct.kind === "ok" ? direct.price : NOT_FOUND;
 }

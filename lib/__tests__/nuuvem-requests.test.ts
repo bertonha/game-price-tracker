@@ -8,6 +8,9 @@ const ITEM = `https://www.nuuvem.com/br-pt/item/${SLUG}`;
 const buyBlock = (cents: number) =>
   `<div class="product-buy"><div data-price="{&quot;v&quot;:${cents}}"></div></div>`;
 
+const drmBadge = (store: string) =>
+  `<ul class="drm-activation"><li class="drm-activation__item drm-activation--${store}"></li></ul>`;
+
 const editionCard = (name: string, slug: string, cents: number) =>
   `<turbo-frame><a title="${name}" href="https://www.nuuvem.com/br-pt/item/${slug}">` +
   `<article class="game-card"><div data-price="{&quot;v&quot;:${cents}}"></div></article></a></turbo-frame>`;
@@ -59,14 +62,14 @@ describe("fetchNuuvem request economy", () => {
     const calls = mockFetch((url) => {
       if (url.includes("autocomplete"))
         return { status: 200, body: JSON.stringify({ products: [] }) };
-      if (url.includes("/item/info/"))
-        return { status: 200, body: JSON.stringify({ info: buyBlock(27800) }) };
       if (url.endsWith("/editions"))
         return {
           status: 200,
           body: editionCard(`${NAME} Deluxe Edition`, `${SLUG}-deluxe-edition`, 35700),
         };
-      return { status: 200, body: "" };
+      if (url === ITEM)
+        return { status: 200, body: `<html>${drmBadge("steam")}${buyBlock(27800)}</html>` };
+      return { status: 404 };
     });
 
     expect(await fetchNuuvem(NAME)).toEqual({
@@ -80,13 +83,28 @@ describe("fetchNuuvem request economy", () => {
         },
       ],
     });
+    // autocomplete, product page, editions — the info endpoint has no DRM badge.
     expect(calls).toHaveLength(3);
+  });
+
+  it("rejects a slug guess that lands on another storefront's listing", async () => {
+    const calls = mockFetch((url) => {
+      if (url.includes("autocomplete"))
+        return { status: 200, body: JSON.stringify({ products: [] }) };
+      return { status: 200, body: `<html>${drmBadge("microsoft")}${buyBlock(13200)}</html>` };
+    });
+
+    expect(await fetchNuuvem(NAME)).toEqual({ price: "N/A", url: null });
+    expect(calls.some((c) => c.endsWith("/editions"))).toBe(false);
   });
 
   it("uses the product page when only the info endpoint is refused", async () => {
     mockFetch((url) => {
       if (url.includes("autocomplete"))
-        return { status: 200, body: JSON.stringify({ products: [] }) };
+        return {
+          status: 200,
+          body: JSON.stringify({ products: [{ url: ITEM, html: `<h1 title="${NAME}"></h1>` }] }),
+        };
       if (url.includes("/item/info/")) return { status: 403 };
       if (url.endsWith("/editions")) return { status: 403 };
       return { status: 200, body: `<html>${buyBlock(27800)}</html>` };
